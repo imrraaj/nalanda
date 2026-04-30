@@ -23,6 +23,7 @@
     "@aws-sdk/s3-request-presigner": "^3.1039.0",
     "@base-ui/react": "^1.4.1",
     "@fontsource-variable/geist": "^5.2.8",
+    "@fontsource-variable/roboto-slab": "^5.2.8",
     "@fontsource/instrument-serif": "^5.2.8",
     "@neondatabase/serverless": "^1.1.0",
     "@tabler/icons-react": "^3.41.1",

@@ -3,143 +3,9 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource/instrument-serif";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/roboto-slab";
 
-@custom-variant dark (&:is(.dark *));
-
-@theme {
-  --font-sans: "Space Grotesk", "Segoe UI", sans-serif;
-  --font-heading: "Instrument Serif", Georgia, serif;
-  --font-mono: "IBM Plex Mono", "SFMono-Regular", monospace;
-}
-
-@layer base {
-  :root {
-    color-scheme: dark;
-  }
-
-  * {
-    border-color: rgb(255 255 255 / 0.1);
-    @apply border-border outline-ring/50;
-  }
-
-  html {
-    min-height: 100%;
-    background: #120808;
-    @apply font-sans;
-  }
-
-  body {
-    min-height: 100vh;
-    background:
-      radial-gradient(circle at top, rgb(251 113 133 / 0.18), transparent 26%),
-      radial-gradient(circle at 80% 15%, rgb(251 146 60 / 0.2), transparent 22%),
-      linear-gradient(180deg, #160908 0%, #120808 42%, #0b0a0c 100%);
-    color: #f5f5f4;
-    font-family: var(--font-sans);
-    @apply bg-background text-foreground;
-  }
-
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    font-family: var(--font-heading);
-  }
-
-  button,
-  input,
-  select,
-  textarea {
-    font: inherit;
-  }
-
-  button:not(:disabled), [role="button"]:not(:disabled) {
-    cursor: pointer;
-  }
-}
-
-@layer utilities {
-  .auth-background {
-    background:
-      linear-gradient(180deg, rgb(255 255 255 / 0.04), rgb(255 255 255 / 0.015)),
-      linear-gradient(180deg, rgb(15 12 11 / 0.12), rgb(15 12 11 / 0.22));
-    backdrop-filter: blur(12px) saturate(0.9);
-  }
-
-  .text-balance {
-    text-wrap: balance;
-  }
-
-  .image {
-    background-image:
-      linear-gradient(180deg, rgb(10 9 8 / 0.12), rgb(10 9 8 / 0.46)),
-      radial-gradient(circle at 18% 16%, rgb(109 143 151 / 0.22), transparent 24%),
-      radial-gradient(circle at 84% 12%, rgb(255 176 97 / 0.12), transparent 24%),
-      url("/cessna.png");
-    background-position: center;
-    background-size: cover;
-    background-repeat: no-repeat;
-  }
-
-  .memoir-pdf-shell .viewerContainer {
-    background:
-      radial-gradient(circle at top, rgb(251 146 60 / 0.07), transparent 20%),
-      linear-gradient(180deg, #262120 0%, #1b1717 100%);
-    scrollbar-color: rgb(255 255 255 / 0.16) transparent;
-  }
-
-  .memoir-pdf-shell .textLayer :is(span, br) {
-    color: transparent !important;
-    -webkit-text-fill-color: transparent !important;
-  }
-
-  .memoir-pdf-shell .textLayer ::selection,
-  .memoir-pdf-shell .textLayer ::-moz-selection {
-    color: transparent !important;
-    -webkit-text-fill-color: transparent !important;
-  }
-
-  .memoir-pdf-shell .viewerContainer::-webkit-scrollbar {
-    height: 12px;
-    width: 12px;
-  }
-
-  .memoir-pdf-shell .viewerContainer::-webkit-scrollbar-thumb {
-    border: 3px solid transparent;
-    border-radius: 999px;
-    background: rgb(255 255 255 / 0.14);
-    background-clip: padding-box;
-  }
-
-  .memoir-pdf-shell .pdfViewer {
-    padding: 1.5rem 0 3rem;
-  }
-
-  .memoir-pdf-shell .viewerContainer .pdfViewer {
-    min-height: 100%;
-  }
-
-  .memoir-pdf-shell .pdfViewer .page {
-    overflow: hidden;
-    border: 1px solid rgb(255 255 255 / 0.08);
-    border-radius: 0.25rem;
-    box-shadow: 0 30px 90px rgb(0 0 0 / 0.28);
-  }
-
-  .memoir-pdf-shell .pdfViewer.removePageBorders .page {
-    margin-bottom: 1.5rem;
-  }
-
-  .memoir-pdf-shell .textLayer .highlight {
-    border-radius: 2px;
-  }
-
-  .memoir-pdf-shell .annotationLayer :is(input, textarea, select) {
-    color: #111827;
-  }
-}
 
 :root {
   --background: oklch(1 0 0);
@@ -148,10 +14,10 @@
   --card-foreground: oklch(0.148 0.004 228.8);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.148 0.004 228.8);
-  --primary: oklch(0.218 0.008 223.9);
-  --primary-foreground: oklch(0.987 0.002 197.1);
-  --secondary: oklch(0.963 0.002 197.1);
-  --secondary-foreground: oklch(0.218 0.008 223.9);
+  --primary: oklch(0.508 0.118 165.612);
+  --primary-foreground: oklch(0.979 0.021 166.113);
+  --secondary: oklch(0.967 0.001 286.375);
+  --secondary-foreground: oklch(0.21 0.006 285.885);
   --muted: oklch(0.963 0.002 197.1);
   --muted-foreground: oklch(0.56 0.021 213.5);
   --accent: oklch(0.963 0.002 197.1);
@@ -165,11 +31,11 @@
   --chart-3: oklch(0.45 0.017 213.2);
   --chart-4: oklch(0.378 0.015 216);
   --chart-5: oklch(0.275 0.011 216.9);
-  --radius: 0.45rem;
+  --radius: 0.1rem;
   --sidebar: oklch(0.987 0.002 197.1);
   --sidebar-foreground: oklch(0.148 0.004 228.8);
-  --sidebar-primary: oklch(0.218 0.008 223.9);
-  --sidebar-primary-foreground: oklch(0.987 0.002 197.1);
+  --sidebar-primary: oklch(0.596 0.145 163.225);
+  --sidebar-primary-foreground: oklch(0.979 0.021 166.113);
   --sidebar-accent: oklch(0.963 0.002 197.1);
   --sidebar-accent-foreground: oklch(0.218 0.008 223.9);
   --sidebar-border: oklch(0.925 0.005 214.3);
@@ -183,10 +49,10 @@
   --card-foreground: oklch(0.987 0.002 197.1);
   --popover: oklch(0.218 0.008 223.9);
   --popover-foreground: oklch(0.987 0.002 197.1);
-  --primary: oklch(0.925 0.005 214.3);
-  --primary-foreground: oklch(0.218 0.008 223.9);
-  --secondary: oklch(0.275 0.011 216.9);
-  --secondary-foreground: oklch(0.987 0.002 197.1);
+  --primary: oklch(0.432 0.095 166.913);
+  --primary-foreground: oklch(0.979 0.021 166.113);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.275 0.011 216.9);
   --muted-foreground: oklch(0.723 0.014 214.4);
   --accent: oklch(0.275 0.011 216.9);
@@ -202,8 +68,8 @@
   --chart-5: oklch(0.275 0.011 216.9);
   --sidebar: oklch(0.218 0.008 223.9);
   --sidebar-foreground: oklch(0.987 0.002 197.1);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.987 0.002 197.1);
+  --sidebar-primary: oklch(0.696 0.17 162.48);
+  --sidebar-primary-foreground: oklch(0.262 0.051 172.552);
   --sidebar-accent: oklch(0.275 0.011 216.9);
   --sidebar-accent-foreground: oklch(0.987 0.002 197.1);
   --sidebar-border: oklch(1 0 0 / 10%);
@@ -211,8 +77,8 @@
 }
 
 @theme inline {
-  --font-sans: "Space Grotesk", "Segoe UI", sans-serif;
-  --font-heading: "Instrument Serif", serif;
+  --font-sans: 'Geist Variable', sans-serif;
+  --font-heading: 'Roboto Slab Variable', serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);

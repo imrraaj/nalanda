@@ -1,19 +1,20 @@
-import type { ComponentProps } from "react";
+import * as React from "react"
+import { Input as InputPrimitive } from "@base-ui/react/input"
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"
 
-function Input({ className, type, ...props }: ComponentProps<"input">) {
+function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (
-    <input
-      data-slot="input"
+    <InputPrimitive
       type={type}
+      data-slot="input"
       className={cn(
-        "flex h-11 w-full rounded-xs border border-white/10 bg-white/5 px-4 py-3 text-sm text-stone-50 outline-none transition duration-200 placeholder:text-stone-500 focus-visible:border-orange-300/60 focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-orange-400/20 disabled:cursor-not-allowed disabled:opacity-60 file:mr-4 file:rounded-xs file:border-0 file:bg-orange-500/15 file:px-4 file:py-2 file:text-sm file:font-medium file:text-orange-100",
-        className,
+        "h-9 w-full min-w-0 rounded-3xl border border-transparent bg-input/50 px-3 py-1 text-base transition-[color,box-shadow,background-color] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
+        className
       )}
       {...props}
     />
-  );
+  )
 }
 
-export { Input };
+export { Input }
