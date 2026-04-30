@@ -1,7 +1,8 @@
 // vite.config.ts
-import { defineConfig } from 'vite'
-import { tanstackStart } from '@tanstack/react-start/plugin/vite'
-import viteReact from '@vitejs/plugin-react'
+import viteReact from "@vitejs/plugin-react";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import tailwindcss from "@tailwindcss/vite";
+import { defineConfig } from "vite";
 
 export default defineConfig({
   server: {
@@ -14,5 +15,6 @@ export default defineConfig({
     tanstackStart(),
     // react's vite plugin must come after start's vite plugin
     viteReact(),
+    tailwindcss(),
   ],
-})
+});

@@ -1,21 +1,23 @@
 import { betterAuth } from "better-auth";
-import { createAuthClient } from "better-auth/react"
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db } from "@/db/index";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 
+import { db } from "@/db/index";
+import { account, session, user, verification } from "@/db/schema";
+
 export const auth = betterAuth({
-    database: drizzleAdapter(db, {
-        provider: "pg", // or "mysql", "sqlite"
-    }),
-
-    emailAndPassword: { 
-        enabled: true,
+  baseURL: process.env.BETTER_AUTH_URL,
+  database: drizzleAdapter(db, {
+    provider: "pg",
+    schema: {
+      user,
+      session,
+      account,
+      verification,
     },
-
-    plugins: [tanstackStartCookies()]
+  }),
+  emailAndPassword: {
+    enabled: true,
+  },
+  plugins: [tanstackStartCookies()],
 });
-
-export const authClient = createAuthClient({
-    baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
-})
