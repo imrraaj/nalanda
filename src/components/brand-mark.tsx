@@ -9,7 +9,7 @@ type BrandMarkProps = {
 
 export function BrandMark({ className, muted = false }: BrandMarkProps) {
   return (
-    <Link to="/" className={cn("font-heading font-black inline-flex items-center gap-3", className)}>
+    <Link to="/" className={cn("font-heading font-black text-white inline-flex items-center gap-3", className)}>
       Memoir
     </Link>
   );

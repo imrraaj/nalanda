@@ -1,7 +1,3 @@
-export function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
-}
-
 export function getInitials(name?: string | null) {
   if (!name) {
     return "M";
@@ -59,4 +55,12 @@ export function deriveNameFromEmail(email: string) {
     .map((part) => part[0]?.toUpperCase() + part.slice(1));
 
   return words.join(" ") || "Memoir User";
+}
+
+
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
 }

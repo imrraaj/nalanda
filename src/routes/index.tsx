@@ -1,6 +1,15 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 
 import { BrandMark } from "@/components/brand-mark";
+import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 const workflowCards = [
   {
@@ -31,7 +40,7 @@ function Home() {
   return (
     <main className="min-h-screen px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-6">
-        <section className="overflow-hidden rounded-xs border border-white/10 bg-white/[0.04] shadow-[0_40px_120px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+        <Card className="overflow-hidden p-0 shadow-[0_40px_120px_rgba(0,0,0,0.35)]">
           <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
             <div className="p-6 sm:p-8 lg:p-10">
               <div className="flex flex-col gap-6">
@@ -40,13 +49,13 @@ function Home() {
 
                   <div className="flex flex-wrap gap-3">
                     <Link
-                      className="rounded-xs border border-white/10 bg-white/5 px-4 py-2 text-sm text-stone-200 transition hover:bg-white/10"
+                      className={buttonVariants({ size: "sm", variant: "outline" })}
                       to="/students/sign-in"
                     >
                       Student sign in
                     </Link>
                     <Link
-                      className="rounded-xs border border-white/10 bg-white/5 px-4 py-2 text-sm text-stone-200 transition hover:bg-white/10"
+                      className={buttonVariants({ size: "sm", variant: "outline" })}
                       to="/admin/sign-in"
                     >
                       Faculty sign in
@@ -55,9 +64,12 @@ function Home() {
                 </header>
 
                 <div className="space-y-5 pt-8">
-                  <span className="inline-flex rounded-xs border border-orange-300/15 bg-orange-500/10 px-4 py-2 font-mono text-[0.72rem] uppercase tracking-[0.3em] text-orange-200/80">
+                  <Badge
+                    className="px-4 py-2 font-mono text-[0.72rem] uppercase tracking-[0.3em] text-orange-200/80"
+                    variant="warm"
+                  >
                     LMS Reading Room
-                  </span>
+                  </Badge>
 
                   <div className="space-y-4">
                     <h1 className="text-balance max-w-4xl text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
@@ -73,14 +85,11 @@ function Home() {
                   </div>
 
                   <div className="flex flex-wrap gap-3 pt-2">
-                    <Link
-                      className="rounded-xs bg-white px-5 py-3 text-sm font-semibold text-stone-950 transition hover:bg-orange-50"
-                      to="/students/sign-up"
-                    >
+                    <Link className={buttonVariants({ size: "lg" })} to="/students/sign-up">
                       Create student account
                     </Link>
                     <Link
-                      className="rounded-xs border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-stone-100 transition hover:bg-white/10"
+                      className={buttonVariants({ size: "lg", variant: "outline" })}
                       to="/dashboard"
                     >
                       Open dashboard
@@ -90,17 +99,19 @@ function Home() {
 
                 <div className="grid gap-4 pt-6 md:grid-cols-3">
                   {readerPreview.map((item) => (
-                    <div
+                    <Card
                       key={item.label}
-                      className="rounded-xs border border-white/10 bg-black/16 p-5"
+                      className="border-white/10 bg-black/16 shadow-none backdrop-blur-none"
                     >
-                      <p className="font-mono text-[0.68rem] uppercase tracking-[0.32em] text-orange-200/70">
-                        {item.label}
-                      </p>
-                      <p className="mt-4 text-3xl font-semibold text-white">
-                        {item.value}
-                      </p>
-                    </div>
+                      <CardContent className="p-5">
+                        <p className="font-mono text-[0.68rem] uppercase tracking-[0.32em] text-orange-200/70">
+                          {item.label}
+                        </p>
+                        <p className="mt-4 text-3xl font-semibold text-white">
+                          {item.value}
+                        </p>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               </div>
@@ -114,16 +125,19 @@ function Home() {
 
               <div className="relative z-10 flex h-full flex-col justify-between p-8 sm:p-10">
                 <div className="flex justify-end">
-                  <span className="rounded-xs border border-white/12 bg-black/12 px-4 py-2 font-mono text-[0.68rem] uppercase tracking-[0.3em] text-orange-50/75">
+                  <Badge
+                    className="px-4 py-2 font-mono text-[0.68rem] uppercase tracking-[0.3em] text-orange-50/75"
+                    variant="outline"
+                  >
                     Guided Access
-                  </span>
+                  </Badge>
                 </div>
 
                 <div className="mx-auto flex w-full max-w-sm items-center justify-center">
                   <div className="relative h-[24rem] w-[18rem]">
                     <div className="absolute inset-x-2 bottom-0 h-16 rounded-xs bg-black/30 blur-2xl" />
-                    <div className="relative mx-auto flex h-[20rem] w-[16rem] items-end justify-center rounded-xs border border-white/15 bg-slate-900/80 p-5 shadow-[0_35px_110px_rgba(0,0,0,0.45)]">
-                      <div className="flex h-52 w-44 flex-col rounded-xs border border-stone-700/70 bg-[#1b1d24] p-4">
+                    <Card className="relative mx-auto flex h-[20rem] w-[16rem] items-end justify-center border-white/15 bg-slate-900/80 p-5 shadow-[0_35px_110px_rgba(0,0,0,0.45)] backdrop-blur-none">
+                      <Card className="flex h-52 w-44 flex-col border-stone-700/70 bg-[#1b1d24] p-4 shadow-none backdrop-blur-none">
                         <div className="rounded-xs border border-stone-700 bg-[#efd07d] px-4 py-5 text-stone-900">
                           <div className="font-mono text-[0.68rem] uppercase tracking-[0.35em] text-stone-600">
                             Reader
@@ -136,9 +150,9 @@ function Home() {
                           <span>Review</span>
                           <span>Publish</span>
                         </div>
-                      </div>
+                      </Card>
                       <div className="absolute bottom-3 h-3 w-16 rounded-xs bg-[#6a3029]" />
-                    </div>
+                    </Card>
                   </div>
                 </div>
 
@@ -155,44 +169,47 @@ function Home() {
               </div>
             </div>
           </div>
-        </section>
+        </Card>
 
         <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-xs border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-sm sm:p-8">
-            <p className="font-mono text-[0.68rem] uppercase tracking-[0.32em] text-orange-200/70">
-              Core workflow
-            </p>
-            <div className="mt-6 grid gap-4 md:grid-cols-3">
-              {workflowCards.map((card) => (
-                <div
-                  key={card.title}
-                  className="rounded-xs border border-white/10 bg-black/14 p-5"
-                >
-                  <h2 className="text-lg font-semibold text-white">
-                    {card.title}
-                  </h2>
-                  <p className="mt-3 text-sm leading-7 text-stone-400">
-                    {card.copy}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
+          <Card>
+            <CardHeader className="p-6 sm:p-8">
+              <p className="font-mono text-[0.68rem] uppercase tracking-[0.32em] text-orange-200/70">
+                Core workflow
+              </p>
+            </CardHeader>
 
-          <div className="rounded-xs border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-sm sm:p-8">
-            <p className="font-mono text-[0.68rem] uppercase tracking-[0.32em] text-orange-200/70">
-              Ready now
-            </p>
-            <h2 className="mt-4 text-2xl font-semibold text-white">
-              Separate auth entry points plus a protected dashboard scaffold.
-            </h2>
-            <p className="mt-4 text-sm leading-7 text-stone-400">
-              This first pass gives you student signup, student sign in, admin
-              sign in, and a protected dashboard with the right visual
-              direction. The next natural step is real role and approval status
-              persistence on the user model.
-            </p>
-          </div>
+            <CardContent className="grid gap-4 p-6 pt-0 sm:p-8 sm:pt-0 md:grid-cols-3">
+              {workflowCards.map((card) => (
+                <Card
+                  key={card.title}
+                  className="border-white/10 bg-black/14 shadow-none backdrop-blur-none"
+                >
+                  <CardHeader className="p-5">
+                    <CardTitle className="text-lg">{card.title}</CardTitle>
+                    <CardDescription>{card.copy}</CardDescription>
+                  </CardHeader>
+                </Card>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="p-6 sm:p-8">
+              <p className="font-mono text-[0.68rem] uppercase tracking-[0.32em] text-orange-200/70">
+                Ready now
+              </p>
+              <CardTitle className="mt-2">
+                Separate auth entry points plus a protected dashboard scaffold.
+              </CardTitle>
+              <CardDescription>
+                This first pass gives you student signup, student sign in, admin
+                sign in, and a protected dashboard with the right visual
+                direction. The next natural step is real role and approval status
+                persistence on the user model.
+              </CardDescription>
+            </CardHeader>
+          </Card>
         </section>
       </div>
     </main>

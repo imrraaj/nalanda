@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { BrandMark } from "@/components/brand-mark";
+import { Card } from "@/components/ui/card";
 
 type AuthShellProps = {
   title: string;
@@ -17,7 +18,7 @@ export function AuthShell({
 }: AuthShellProps) {
   return (
     <main className="image min-h-screen px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-6xl overflow-hidden rounded-xs border border-white/12 bg-black/8 shadow-[0_40px_140px_rgba(0,0,0,0.45)] lg:grid-cols-[420px_minmax(0,1fr)]">
+      <Card className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-6xl overflow-hidden border-white/12 bg-black/8 p-0 shadow-[0_40px_140px_rgba(0,0,0,0.45)] backdrop-blur-none lg:grid-cols-[420px_minmax(0,1fr)]">
         <section className="flex flex-col justify-between bg-[linear-gradient(180deg,rgba(15,12,11,0.92),rgba(15,12,11,0.86))] p-8 sm:p-10">
           <div className="space-y-10">
             <BrandMark />
@@ -38,7 +39,7 @@ export function AuthShell({
         </section>
 
         <section className="auth-background relative hidden lg:block" />
-      </div>
+      </Card>
     </main>
   );
 }

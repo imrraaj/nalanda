@@ -3,6 +3,8 @@ import { startTransition, useState } from "react";
 
 import { AuthShell } from "@/components/auth/auth-shell";
 import { CredentialField } from "@/components/auth/credential-field";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 import { getSession } from "@/lib/auth-session";
 
@@ -91,18 +93,14 @@ function StudentSignInPage() {
         />
 
         {errorMessage ? (
-          <div className="rounded-xs border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-            {errorMessage}
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
         ) : null}
 
-        <button
-          className="w-full rounded-xs bg-white px-4 py-3 text-sm font-semibold text-stone-950 transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={isSubmitting}
-          type="submit"
-        >
+        <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
           {isSubmitting ? "Signing in..." : "Sign in"}
-        </button>
+        </Button>
       </form>
     </AuthShell>
   );

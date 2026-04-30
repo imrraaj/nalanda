@@ -3,6 +3,20 @@ import { startTransition, useEffect, useState } from "react";
 
 import type { StoredDocument } from "@/bucket/types";
 import { BrandMark } from "@/components/brand-mark";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import { authClient } from "@/lib/auth-client";
 import { getSession } from "@/lib/auth-session";
 import { formatBytes, formatDateTime, getInitials } from "@/lib/utils";
@@ -199,50 +213,52 @@ function DashboardPage() {
   return (
     <main className="min-h-screen px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-6">
-        <header className="flex flex-col gap-4 rounded-xs border border-white/10 bg-white/[0.04] px-6 py-5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <BrandMark />
-            <span className="hidden h-10 w-px bg-white/10 sm:block" />
-            <div className="space-y-1">
-              <p className="font-mono text-[0.68rem] uppercase tracking-[0.35em] text-orange-200/70">
-                Protected workspace
-              </p>
-              <p className="text-sm text-stone-400">
-                Signed in as {user.email}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-3 rounded-xs border border-white/10 bg-black/15 px-3 py-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xs bg-orange-500/12 font-semibold text-orange-100">
-                {getInitials(user.name)}
-              </div>
-              <div>
-                <p className="text-sm font-medium text-white">{user.name}</p>
-                <p className="text-xs text-stone-400">Memoir operator</p>
+        <Card className="px-6 py-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <BrandMark />
+              <Separator className="hidden h-10 sm:block" orientation="vertical" />
+              <div className="space-y-1">
+                <p className="font-mono text-[0.68rem] uppercase tracking-[0.35em] text-orange-200/70">
+                  Protected workspace
+                </p>
+                <p className="text-sm text-stone-400">Signed in as {user.email}</p>
               </div>
             </div>
 
-            <button
-              className="rounded-xs border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-stone-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={isSigningOut}
-              onClick={() => {
-                void handleSignOut();
-              }}
-              type="button"
-            >
-              {isSigningOut ? "Signing out..." : "Sign out"}
-            </button>
+            <div className="flex flex-wrap items-center gap-3">
+              <Card className="border-white/10 bg-black/15 shadow-none backdrop-blur-none">
+                <CardContent className="flex items-center gap-3 p-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xs bg-orange-500/12 font-semibold text-orange-100">
+                    {getInitials(user.name)}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">{user.name}</p>
+                    <p className="text-xs text-stone-400">Memoir operator</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Button
+                disabled={isSigningOut}
+                onClick={() => {
+                  void handleSignOut();
+                }}
+                type="button"
+                variant="outline"
+              >
+                {isSigningOut ? "Signing out..." : "Sign out"}
+              </Button>
+            </div>
           </div>
-        </header>
+        </Card>
 
         <section className="grid gap-6 lg:grid-cols-[1.45fr_0.95fr]">
-          <div className="relative overflow-hidden rounded-xs border border-white/10 bg-[linear-gradient(145deg,rgba(61,13,13,0.88),rgba(214,75,20,0.62))] p-8 shadow-[0_30px_100px_rgba(0,0,0,0.32)]">
+          <Card className="relative overflow-hidden border-white/10 bg-[linear-gradient(145deg,rgba(61,13,13,0.88),rgba(214,75,20,0.62))] shadow-[0_30px_100px_rgba(0,0,0,0.32)] backdrop-blur-none">
             <div className="absolute -left-12 top-0 h-48 w-48 rounded-xs bg-black/20 blur-3xl" />
             <div className="absolute bottom-0 right-0 h-56 w-56 rounded-xs bg-orange-100/10 blur-3xl" />
 
-            <div className="relative z-10 space-y-8">
+            <CardContent className="relative z-10 space-y-8 p-8">
               <div className="space-y-4">
                 <p className="font-mono text-xs uppercase tracking-[0.35em] text-orange-100/75">
                   Moderated library dashboard
@@ -261,256 +277,261 @@ function DashboardPage() {
               </div>
 
               <div className="flex flex-wrap gap-3 text-sm">
-                <span className="rounded-xs border border-white/12 bg-black/12 px-4 py-2 text-orange-50/85">
+                <Badge className="px-4 py-2 text-sm text-orange-50/85" variant="outline">
                   Reader access stays session controlled
-                </span>
-                <span className="rounded-xs border border-white/12 bg-black/12 px-4 py-2 text-orange-50/85">
+                </Badge>
+                <Badge className="px-4 py-2 text-sm text-orange-50/85" variant="outline">
                   Document uploads wait for review
-                </span>
-                <span className="rounded-xs border border-white/12 bg-black/12 px-4 py-2 text-orange-50/85">
+                </Badge>
+                <Badge className="px-4 py-2 text-sm text-orange-50/85" variant="outline">
                   Library material is faculty curated
-                </span>
+                </Badge>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-3">
                 {overviewStats.map((stat) => (
-                  <div
+                  <Card
                     key={stat.label}
-                    className="rounded-xs border border-white/10 bg-black/16 p-5"
+                    className="border-white/10 bg-black/16 shadow-none backdrop-blur-none"
                   >
-                    <p className="font-mono text-[0.68rem] uppercase tracking-[0.32em] text-orange-100/65">
-                      {stat.label}
-                    </p>
-                    <p className="mt-4 text-3xl font-semibold text-white">
-                      {stat.value}
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-orange-50/72">
-                      {stat.detail}
-                    </p>
-                  </div>
+                    <CardContent className="p-5">
+                      <p className="font-mono text-[0.68rem] uppercase tracking-[0.32em] text-orange-100/65">
+                        {stat.label}
+                      </p>
+                      <p className="mt-4 text-3xl font-semibold text-white">
+                        {stat.value}
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-orange-50/72">
+                        {stat.detail}
+                      </p>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <aside className="space-y-4 rounded-xs border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-sm">
-            <div className="rounded-xs border border-white/10 bg-black/15 p-5">
-              <p className="font-mono text-[0.68rem] uppercase tracking-[0.32em] text-orange-200/70">
-                Approval path
-              </p>
-              <h2 className="mt-3 text-xl font-semibold text-white">
-                Shared dashboard now, role gates next.
-              </h2>
-              <p className="mt-3 text-sm leading-7 text-stone-400">
-                The auth screens are live and protected. The next backend step is
-                mapping real user roles and approval states into the Better Auth
-                user model so student and faculty dashboards can diverge from
-                actual database state.
-              </p>
-            </div>
+          <Card className="space-y-4 p-6">
+            <Card className="border-white/10 bg-black/15 shadow-none backdrop-blur-none">
+              <CardHeader className="p-5">
+                <p className="font-mono text-[0.68rem] uppercase tracking-[0.32em] text-orange-200/70">
+                  Approval path
+                </p>
+                <CardTitle className="text-xl">
+                  Shared dashboard now, role gates next.
+                </CardTitle>
+                <CardDescription>
+                  The auth screens are live and protected. The next backend step is
+                  mapping real user roles and approval states into the Better Auth
+                  user model so student and faculty dashboards can diverge from
+                  actual database state.
+                </CardDescription>
+              </CardHeader>
+            </Card>
 
-            <div className="rounded-xs border border-white/10 bg-white/[0.03] p-5">
-              <p className="font-mono text-[0.68rem] uppercase tracking-[0.32em] text-orange-200/70">
-                Review checklist
-              </p>
-              <div className="mt-4 space-y-3">
+            <Card className="border-white/10 bg-white/[0.03] shadow-none backdrop-blur-none">
+              <CardHeader className="p-5 pb-0">
+                <p className="font-mono text-[0.68rem] uppercase tracking-[0.32em] text-orange-200/70">
+                  Review checklist
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-3 p-5 pt-4">
                 {reviewChecklist.map((item) => (
-                  <div
+                  <Card
                     key={item}
-                    className="rounded-xs border border-white/8 bg-black/10 px-4 py-3 text-sm leading-6 text-stone-300"
+                    className="border-white/8 bg-black/10 shadow-none backdrop-blur-none"
                   >
-                    {item}
-                  </div>
+                    <CardContent className="px-4 py-3 text-sm leading-6 text-stone-300">
+                      {item}
+                    </CardContent>
+                  </Card>
                 ))}
-              </div>
-            </div>
-          </aside>
+              </CardContent>
+            </Card>
+          </Card>
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[1.3fr_0.9fr]">
-          <div className="rounded-xs border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-sm">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <Card>
+            <CardHeader className="flex flex-col gap-2 p-6 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="font-mono text-[0.68rem] uppercase tracking-[0.32em] text-orange-200/70">
                   Reading room
                 </p>
-                <h2 className="mt-3 text-2xl font-semibold text-white">
+                <CardTitle className="mt-3">
                   Library cards ready for the reader layer
-                </h2>
+                </CardTitle>
               </div>
               <p className="text-sm text-stone-400">
                 Catalog entries, progress, and publish status
               </p>
-            </div>
+            </CardHeader>
 
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <CardContent className="grid gap-4 p-6 pt-0 md:grid-cols-2">
               {libraryShelf.map((item) => (
-                <div
+                <Card
                   key={item.title}
-                  className="rounded-xs border border-white/10 bg-black/14 p-5"
+                  className="border-white/10 bg-black/14 shadow-none backdrop-blur-none"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-lg font-semibold text-white">
-                        {item.title}
-                      </p>
-                      <p className="mt-2 text-sm text-stone-400">{item.chapter}</p>
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-lg font-semibold text-white">
+                          {item.title}
+                        </p>
+                        <p className="mt-2 text-sm text-stone-400">{item.chapter}</p>
+                      </div>
+                      <Badge>{item.status}</Badge>
                     </div>
-                    <span className="rounded-xs border border-white/10 bg-white/5 px-3 py-1 text-xs text-stone-300">
-                      {item.status}
-                    </span>
-                  </div>
 
-                  <div className="mt-6">
-                    <div className="flex items-center justify-between text-xs uppercase tracking-[0.24em] text-stone-500">
-                      <span>Progress</span>
-                      <span>{item.progress}</span>
-                    </div>
-                    <div className="mt-3 h-2 rounded-xs bg-white/8">
-                      <div
-                        className="h-2 rounded-xs bg-[linear-gradient(90deg,#fdba74,#f97316)]"
-                        style={{ width: item.progress }}
+                    <div className="mt-6">
+                      <div className="flex items-center justify-between text-xs uppercase tracking-[0.24em] text-stone-500">
+                        <span>Progress</span>
+                        <span>{item.progress}</span>
+                      </div>
+                      <Progress
+                        className="mt-3"
+                        value={Number.parseInt(item.progress, 10) || 0}
                       />
                     </div>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               ))}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <div className="rounded-xs border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-sm">
-            <div>
+          <Card>
+            <CardHeader className="p-6">
               <p className="font-mono text-[0.68rem] uppercase tracking-[0.32em] text-orange-200/70">
                 Document uploads
               </p>
-              <h2 className="mt-3 text-2xl font-semibold text-white">
+              <CardTitle className="mt-3">
                 Upload and review shared material
-              </h2>
-              <p className="mt-2 text-sm leading-7 text-stone-400">
+              </CardTitle>
+              <CardDescription className="mt-2">
                 Students and faculty can upload any document here. Right now the
                 workspace is shared for authenticated users; role-aware review
                 gating can sit on top of this storage layer next.
-              </p>
-            </div>
+              </CardDescription>
+            </CardHeader>
 
-            <form className="mt-6 space-y-4" onSubmit={handleUpload}>
-              <label className="block space-y-3 rounded-xs border border-white/10 bg-black/14 p-5">
-                <span className="text-sm font-medium text-white">
-                  Choose a document to upload
-                </span>
-                <input
-                  className="block w-full rounded-xs border border-white/10 bg-white/5 px-4 py-3 text-sm text-stone-200 file:mr-4 file:rounded-xs file:border-0 file:bg-orange-500/15 file:px-4 file:py-2 file:text-sm file:font-medium file:text-orange-100"
-                  name="file"
-                  onChange={(event) =>
-                    setSelectedFile(event.currentTarget.files?.[0] ?? null)
-                  }
-                  type="file"
-                />
-                <p className="text-sm text-stone-400">
-                  Course packets, notes, reports, handouts, or review material
-                  can all use the same authenticated upload path.
-                </p>
-                {selectedFile ? (
-                  <p className="text-sm text-orange-100/85">
-                    Selected: {selectedFile.name} · {formatBytes(selectedFile.size)}
-                  </p>
+            <CardContent className="space-y-4 p-6 pt-0">
+              <form className="space-y-4" onSubmit={handleUpload}>
+                <Card className="border-white/10 bg-black/14 shadow-none backdrop-blur-none">
+                  <CardContent className="space-y-3 p-5">
+                    <Label className="block space-y-3">
+                      <span className="block text-sm font-medium text-white">
+                        Choose a document to upload
+                      </span>
+                      <Input
+                        className="h-auto cursor-pointer py-3 text-stone-200"
+                        name="file"
+                        onChange={(event) =>
+                          setSelectedFile(event.currentTarget.files?.[0] ?? null)
+                        }
+                        type="file"
+                      />
+                    </Label>
+                    <p className="text-sm text-stone-400">
+                      Course packets, notes, reports, handouts, or review material
+                      can all use the same authenticated upload path.
+                    </p>
+                    {selectedFile ? (
+                      <Badge className="w-fit" variant="warm">
+                        Selected: {selectedFile.name} · {formatBytes(selectedFile.size)}
+                      </Badge>
+                    ) : null}
+                  </CardContent>
+                </Card>
+
+                <div className="flex flex-wrap gap-3">
+                  <Button disabled={!selectedFile || isUploadingDocument} type="submit">
+                    {isUploadingDocument ? "Uploading..." : "Upload document"}
+                  </Button>
+                  <Button
+                    disabled={isLoadingDocuments}
+                    onClick={() => {
+                      void loadDocuments();
+                    }}
+                    type="button"
+                    variant="outline"
+                  >
+                    {isLoadingDocuments ? "Refreshing..." : "Refresh uploads"}
+                  </Button>
+                </div>
+              </form>
+
+              {uploadMessage ? (
+                <Alert variant="success">
+                  <AlertDescription>{uploadMessage}</AlertDescription>
+                </Alert>
+              ) : null}
+
+              {documentsError ? (
+                <Alert variant="destructive">
+                  <AlertDescription>{documentsError}</AlertDescription>
+                </Alert>
+              ) : null}
+
+              <div className="space-y-4">
+                {isLoadingDocuments ? (
+                  <Alert>
+                    <AlertDescription>Loading uploaded documents...</AlertDescription>
+                  </Alert>
                 ) : null}
-              </label>
 
-              <div className="flex flex-wrap gap-3">
-                <button
-                  className="rounded-xs bg-white px-4 py-3 text-sm font-semibold text-stone-950 transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={!selectedFile || isUploadingDocument}
-                  type="submit"
-                >
-                  {isUploadingDocument ? "Uploading..." : "Upload document"}
-                </button>
-                <button
-                  className="rounded-xs border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-stone-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={isLoadingDocuments}
-                  onClick={() => {
-                    void loadDocuments();
-                  }}
-                  type="button"
-                >
-                  {isLoadingDocuments ? "Refreshing..." : "Refresh uploads"}
-                </button>
+                {!isLoadingDocuments && documents.length === 0 ? (
+                  <Alert>
+                    <AlertDescription>No documents uploaded yet.</AlertDescription>
+                  </Alert>
+                ) : null}
+
+                {!isLoadingDocuments
+                  ? documents.map((document) => (
+                      <Card
+                        key={document.key}
+                        className="border-white/10 bg-black/14 shadow-none backdrop-blur-none"
+                      >
+                        <CardContent className="p-5">
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <p className="text-base font-semibold text-white">
+                                {document.name}
+                              </p>
+                              <p className="mt-2 text-sm text-stone-400">
+                                Uploaded by{" "}
+                                {document.uploadedBy === user.id
+                                  ? "you"
+                                  : document.uploadedBy ?? "unknown user"}
+                              </p>
+                            </div>
+                            <Button
+                              disabled={isOpeningDocumentKey === document.key}
+                              onClick={() => {
+                                void handleOpenDocument(document.key);
+                              }}
+                              size="sm"
+                              type="button"
+                              variant="outline"
+                            >
+                              {isOpeningDocumentKey === document.key
+                                ? "Opening..."
+                                : "Open link"}
+                            </Button>
+                          </div>
+
+                          <div className="mt-4 flex flex-wrap gap-2 text-xs text-stone-400">
+                            <Badge>{formatBytes(document.size)}</Badge>
+                            <Badge>{formatDateTime(document.uploadedAt)}</Badge>
+                            <Badge variant="warm">Authenticated upload</Badge>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  : null}
               </div>
-            </form>
-
-            {uploadMessage ? (
-              <div className="mt-4 rounded-xs border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-                {uploadMessage}
-              </div>
-            ) : null}
-
-            {documentsError ? (
-              <div className="mt-4 rounded-xs border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-                {documentsError}
-              </div>
-            ) : null}
-
-            <div className="mt-6 space-y-4">
-              {isLoadingDocuments ? (
-                <div className="rounded-xs border border-white/10 bg-black/14 p-5 text-sm text-stone-400">
-                  Loading uploaded documents...
-                </div>
-              ) : null}
-
-              {!isLoadingDocuments && documents.length === 0 ? (
-                <div className="rounded-xs border border-dashed border-white/12 bg-black/10 p-5 text-sm text-stone-400">
-                  No documents uploaded yet.
-                </div>
-              ) : null}
-
-              {!isLoadingDocuments
-                ? documents.map((document) => (
-                    <div
-                      key={document.key}
-                      className="rounded-xs border border-white/10 bg-black/14 p-5"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="text-base font-semibold text-white">
-                            {document.name}
-                          </p>
-                          <p className="mt-2 text-sm text-stone-400">
-                            Uploaded by{" "}
-                            {document.uploadedBy === user.id
-                              ? "you"
-                              : document.uploadedBy ?? "unknown user"}
-                          </p>
-                        </div>
-                        <button
-                          className="rounded-xs border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-stone-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-                          disabled={isOpeningDocumentKey === document.key}
-                          onClick={() => {
-                            void handleOpenDocument(document.key);
-                          }}
-                          type="button"
-                        >
-                          {isOpeningDocumentKey === document.key
-                            ? "Opening..."
-                            : "Open link"}
-                        </button>
-                      </div>
-
-                      <div className="mt-4 flex flex-wrap gap-2 text-xs text-stone-400">
-                        <span className="rounded-xs border border-white/10 bg-white/5 px-3 py-1">
-                          {formatBytes(document.size)}
-                        </span>
-                        <span className="rounded-xs border border-white/10 bg-white/5 px-3 py-1">
-                          {formatDateTime(document.uploadedAt)}
-                        </span>
-                        <span className="rounded-xs border border-orange-300/16 bg-orange-500/10 px-3 py-1 text-orange-100/85">
-                          Authenticated upload
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                : null}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </section>
       </div>
     </main>
