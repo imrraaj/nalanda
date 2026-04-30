@@ -35,6 +35,19 @@ export type StorageListObjectsInput = {
   prefix?: string;
 };
 
+export type StorageGetObjectInput = {
+  bucket: string;
+  key: string;
+};
+
+export type StorageGetObjectOutput = {
+  body: Blob | NodeJS.ReadableStream | ReadableStream<Uint8Array> | Uint8Array;
+  contentLength: number | null;
+  contentType: string | null;
+  lastModified: string | null;
+  metadata: Record<string, string>;
+};
+
 export type StorageSignedReadUrlInput = {
   bucket: string;
   expiresInSeconds?: number;
@@ -45,6 +58,7 @@ export interface ObjectStorageDriver {
   createSignedReadUrl(input: StorageSignedReadUrlInput): Promise<string>;
   deleteObject(bucket: string, key: string): Promise<void>;
   ensureBucket(bucket: string): Promise<void>;
+  getObject(input: StorageGetObjectInput): Promise<StorageGetObjectOutput>;
   listObjects(input: StorageListObjectsInput): Promise<StorageObjectSummary[]>;
   putObject(input: StoragePutObjectInput): Promise<void>;
 }

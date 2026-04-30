@@ -1,11 +1,11 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { startTransition, useEffect, useState } from "react";
 
 import type { StoredDocument } from "@/bucket/types";
 import { BrandMark } from "@/components/brand-mark";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -19,7 +19,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { authClient } from "@/lib/auth-client";
 import { getSession } from "@/lib/auth-session";
-import { formatBytes, formatDateTime, getInitials } from "@/lib/utils";
+import { cn, formatBytes, formatDateTime, getInitials } from "@/lib/utils";
 
 const overviewStats = [
   {
@@ -72,6 +72,10 @@ const reviewChecklist = [
   "Publish only approved material into the shared, non-downloadable library.",
 ];
 
+function isPdfDocument(name: string) {
+  return name.toLowerCase().endsWith(".pdf");
+}
+
 export const Route = createFileRoute("/dashboard")({
   beforeLoad: async () => {
     const session = await getSession();
@@ -91,7 +95,6 @@ function DashboardPage() {
   const [documents, setDocuments] = useState<StoredDocument[]>([]);
   const [documentsError, setDocumentsError] = useState<string | null>(null);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(true);
-  const [isOpeningDocumentKey, setIsOpeningDocumentKey] = useState<string | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -179,31 +182,6 @@ function DashboardPage() {
       setDocumentsError(error instanceof Error ? error.message : "Upload failed.");
     } finally {
       setIsUploadingDocument(false);
-    }
-  }
-
-  async function handleOpenDocument(key: string) {
-    setIsOpeningDocumentKey(key);
-    setDocumentsError(null);
-
-    try {
-      const response = await fetch(`/api/uploads?key=${encodeURIComponent(key)}`);
-      const payload = (await response.json()) as {
-        error?: string;
-        url?: string;
-      };
-
-      if (!response.ok || !payload.url) {
-        throw new Error(payload.error ?? "Unable to generate document link.");
-      }
-
-      window.open(payload.url, "_blank", "noopener,noreferrer");
-    } catch (error) {
-      setDocumentsError(
-        error instanceof Error ? error.message : "Unable to open document.",
-      );
-    } finally {
-      setIsOpeningDocumentKey(null);
     }
   }
 
@@ -505,19 +483,22 @@ function DashboardPage() {
                                   : document.uploadedBy ?? "unknown user"}
                               </p>
                             </div>
-                            <Button
-                              disabled={isOpeningDocumentKey === document.key}
-                              onClick={() => {
-                                void handleOpenDocument(document.key);
-                              }}
-                              size="sm"
-                              type="button"
-                              variant="outline"
-                            >
-                              {isOpeningDocumentKey === document.key
-                                ? "Opening..."
-                                : "Open link"}
-                            </Button>
+                            {isPdfDocument(document.name) ? (
+                              <Link
+                                className={cn(
+                                  buttonVariants({ size: "sm", variant: "outline" }),
+                                )}
+                                search={{
+                                  key: document.key,
+                                  name: document.name,
+                                }}
+                                to="/reader"
+                              >
+                                Open reader
+                              </Link>
+                            ) : (
+                              <Badge variant="outline">PDF viewer only</Badge>
+                            )}
                           </div>
 
                           <div className="mt-4 flex flex-wrap gap-2 text-xs text-stone-400">

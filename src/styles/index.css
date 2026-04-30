@@ -55,10 +55,6 @@
     font: inherit;
   }
 
-  ::selection {
-    background: rgb(249 115 22 / 0.35);
-    color: #fff;
-  }
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;
   }
@@ -85,6 +81,63 @@
     background-position: center;
     background-size: cover;
     background-repeat: no-repeat;
+  }
+
+  .memoir-pdf-shell .viewerContainer {
+    background:
+      radial-gradient(circle at top, rgb(251 146 60 / 0.07), transparent 20%),
+      linear-gradient(180deg, #262120 0%, #1b1717 100%);
+    scrollbar-color: rgb(255 255 255 / 0.16) transparent;
+  }
+
+  .memoir-pdf-shell .textLayer :is(span, br) {
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
+  }
+
+  .memoir-pdf-shell .textLayer ::selection,
+  .memoir-pdf-shell .textLayer ::-moz-selection {
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
+  }
+
+  .memoir-pdf-shell .viewerContainer::-webkit-scrollbar {
+    height: 12px;
+    width: 12px;
+  }
+
+  .memoir-pdf-shell .viewerContainer::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.14);
+    background-clip: padding-box;
+  }
+
+  .memoir-pdf-shell .pdfViewer {
+    padding: 1.5rem 0 3rem;
+  }
+
+  .memoir-pdf-shell .viewerContainer .pdfViewer {
+    min-height: 100%;
+  }
+
+  .memoir-pdf-shell .pdfViewer .page {
+    overflow: hidden;
+    border: 1px solid rgb(255 255 255 / 0.08);
+    border-radius: 0.25rem;
+    box-shadow: 0 30px 90px rgb(0 0 0 / 0.28);
+  }
+
+  .memoir-pdf-shell .pdfViewer.removePageBorders .page {
+    margin-bottom: 1.5rem;
+  }
+
+  .memoir-pdf-shell .textLayer .highlight {
+    border-radius: 2px;
+  }
+
+  .memoir-pdf-shell .annotationLayer :is(input, textarea, select) {
+    color: #111827;
   }
 }
 

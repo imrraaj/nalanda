@@ -1,3 +1,5 @@
+import { Readable } from "node:stream";
+
 import { documentStorageConfig } from "@/bucket/config";
 import { S3StorageDriver } from "@/bucket/s3-storage";
 import type { ObjectStorageDriver, StoredDocument, UploadDocumentInput } from "@/bucket/types";
@@ -10,6 +12,39 @@ function sanitizeFileName(name: string) {
     .replace(/[^a-zA-Z0-9._ -]/g, "");
 
   return cleaned || "document";
+}
+
+function inferContentTypeFromName(name: string) {
+  const normalizedName = name.toLowerCase();
+
+  if (normalizedName.endsWith(".pdf")) {
+    return "application/pdf";
+  }
+
+  return "application/octet-stream";
+}
+
+function toWebStream(
+  body: Blob | NodeJS.ReadableStream | ReadableStream<Uint8Array> | Uint8Array,
+) {
+  if (body instanceof ReadableStream) {
+    return body;
+  }
+
+  if (body instanceof Blob) {
+    return body.stream();
+  }
+
+  if (body instanceof Uint8Array) {
+    return new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(body);
+        controller.close();
+      },
+    });
+  }
+
+  return Readable.toWeb(body as Readable) as ReadableStream<Uint8Array>;
 }
 
 export class DocumentStorage {
@@ -86,6 +121,26 @@ export class DocumentStorage {
     });
   }
 
+  async getDocumentContent(key: string) {
+    this.assertManagedKey(key);
+
+    const object = await this.driver.getObject({
+      bucket: this.config.bucketName,
+      key,
+    });
+    const fileName = object.metadata["original-name"] ?? this.getDisplayName(key.split("/").at(-1) ?? key);
+
+    return {
+      body: toWebStream(object.body),
+      contentLength: object.contentLength,
+      contentType: object.contentType ?? inferContentTypeFromName(fileName),
+      key,
+      name: fileName,
+      uploadedAt: object.lastModified,
+      uploadedBy: object.metadata["uploaded-by"] ?? this.getUploadedByFromKey(key),
+    };
+  }
+
   async deleteDocument(key: string) {
     this.assertManagedKey(key);
 
@@ -100,10 +155,16 @@ export class DocumentStorage {
     return `${this.config.rootPrefix}/${uploadedBy}/`;
   }
 
+  private getUploadedByFromKey(key: string) {
+    const parts = key.split("/");
+
+    return parts.length >= 3 ? parts[1] ?? null : null;
+  }
+
   private mapStoredDocument(object: { key: string; lastModified: string | null; size: number }) {
     const parts = object.key.split("/");
     const fileName = parts.at(-1) ?? object.key;
-    const uploadedBy = parts.length >= 3 ? parts[1] ?? null : null;
+    const uploadedBy = this.getUploadedByFromKey(object.key);
 
     return {
       bucket: this.config.bucketName,

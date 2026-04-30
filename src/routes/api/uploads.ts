@@ -21,18 +21,16 @@ export const Route = createFileRoute("/api/uploads")({
 
         const url = new URL(request.url);
         const key = url.searchParams.get("key");
-        const { documentStorage } = await import("@/bucket");
 
         if (key) {
-          try {
-            const accessUrl = await documentStorage.getSignedReadUrl(key);
-            return json({ url: accessUrl });
-          } catch (error) {
-            return json({ error: getErrorMessage(error) }, 400);
-          }
+          return json(
+            { error: "Direct document URLs are disabled. Open documents through the reader page." },
+            400,
+          );
         }
 
         const mineOnly = url.searchParams.get("mine") === "true";
+        const { documentStorage } = await import("@/bucket");
         const documents = await documentStorage.listDocuments({
           uploadedBy: mineOnly ? session.user.id : undefined,
         });

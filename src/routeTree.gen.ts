@@ -9,14 +9,21 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ReaderRouteImport } from './routes/reader'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StudentsSignUpRouteImport } from './routes/students/sign-up'
 import { Route as StudentsSignInRouteImport } from './routes/students/sign-in'
 import { Route as ApiUploadsRouteImport } from './routes/api/uploads'
 import { Route as AdminSignInRouteImport } from './routes/admin/sign-in'
+import { Route as ApiDocumentsContentRouteImport } from './routes/api/documents/content'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
+const ReaderRoute = ReaderRouteImport.update({
+  id: '/reader',
+  path: '/reader',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -47,6 +54,11 @@ const AdminSignInRoute = AdminSignInRouteImport.update({
   path: '/admin/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDocumentsContentRoute = ApiDocumentsContentRouteImport.update({
+  id: '/api/documents/content',
+  path: '/api/documents/content',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -56,73 +68,94 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/reader': typeof ReaderRoute
   '/admin/sign-in': typeof AdminSignInRoute
   '/api/uploads': typeof ApiUploadsRoute
   '/students/sign-in': typeof StudentsSignInRoute
   '/students/sign-up': typeof StudentsSignUpRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/documents/content': typeof ApiDocumentsContentRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/reader': typeof ReaderRoute
   '/admin/sign-in': typeof AdminSignInRoute
   '/api/uploads': typeof ApiUploadsRoute
   '/students/sign-in': typeof StudentsSignInRoute
   '/students/sign-up': typeof StudentsSignUpRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/documents/content': typeof ApiDocumentsContentRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/reader': typeof ReaderRoute
   '/admin/sign-in': typeof AdminSignInRoute
   '/api/uploads': typeof ApiUploadsRoute
   '/students/sign-in': typeof StudentsSignInRoute
   '/students/sign-up': typeof StudentsSignUpRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/documents/content': typeof ApiDocumentsContentRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/dashboard'
+    | '/reader'
     | '/admin/sign-in'
     | '/api/uploads'
     | '/students/sign-in'
     | '/students/sign-up'
     | '/api/auth/$'
+    | '/api/documents/content'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/dashboard'
+    | '/reader'
     | '/admin/sign-in'
     | '/api/uploads'
     | '/students/sign-in'
     | '/students/sign-up'
     | '/api/auth/$'
+    | '/api/documents/content'
   id:
     | '__root__'
     | '/'
     | '/dashboard'
+    | '/reader'
     | '/admin/sign-in'
     | '/api/uploads'
     | '/students/sign-in'
     | '/students/sign-up'
     | '/api/auth/$'
+    | '/api/documents/content'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
+  ReaderRoute: typeof ReaderRoute
   AdminSignInRoute: typeof AdminSignInRoute
   ApiUploadsRoute: typeof ApiUploadsRoute
   StudentsSignInRoute: typeof StudentsSignInRoute
   StudentsSignUpRoute: typeof StudentsSignUpRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiDocumentsContentRoute: typeof ApiDocumentsContentRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/reader': {
+      id: '/reader'
+      path: '/reader'
+      fullPath: '/reader'
+      preLoaderRoute: typeof ReaderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -165,6 +198,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSignInRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/documents/content': {
+      id: '/api/documents/content'
+      path: '/api/documents/content'
+      fullPath: '/api/documents/content'
+      preLoaderRoute: typeof ApiDocumentsContentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -178,11 +218,13 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
+  ReaderRoute: ReaderRoute,
   AdminSignInRoute: AdminSignInRoute,
   ApiUploadsRoute: ApiUploadsRoute,
   StudentsSignInRoute: StudentsSignInRoute,
   StudentsSignUpRoute: StudentsSignUpRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiDocumentsContentRoute: ApiDocumentsContentRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

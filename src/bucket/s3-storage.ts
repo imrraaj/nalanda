@@ -12,7 +12,9 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { DocumentStorageConfig } from "@/bucket/config";
 import type {
   ObjectStorageDriver,
+  StorageGetObjectInput,
   StorageListObjectsInput,
+  StorageGetObjectOutput,
   StoragePutObjectInput,
   StorageSignedReadUrlInput,
 } from "@/bucket/types";
@@ -109,6 +111,29 @@ export class S3StorageDriver implements ObjectStorageDriver {
       lastModified: item.LastModified?.toISOString() ?? null,
       size: item.Size ?? 0,
     }));
+  }
+
+  async getObject(input: StorageGetObjectInput): Promise<StorageGetObjectOutput> {
+    await this.ensureBucket(input.bucket);
+
+    const response = await this.client.send(
+      new GetObjectCommand({
+        Bucket: input.bucket,
+        Key: input.key,
+      }),
+    );
+
+    if (!response.Body) {
+      throw new Error("The requested object did not return any content.");
+    }
+
+    return {
+      body: response.Body as StorageGetObjectOutput["body"],
+      contentLength: response.ContentLength ?? null,
+      contentType: response.ContentType ?? null,
+      lastModified: response.LastModified?.toISOString() ?? null,
+      metadata: response.Metadata ?? {},
+    };
   }
 
   async createSignedReadUrl(input: StorageSignedReadUrlInput) {

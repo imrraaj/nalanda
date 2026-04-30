@@ -33,6 +33,8 @@
     "clsx": "^2.1.1",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
+    "nitro": "^3.0.260429-beta",
+    "pdfjs-dist": "^5.7.284",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "shadcn": "^4.6.0",
@@ -42,6 +44,12 @@
   },
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build"
+    "build": "vite build",
+    "preview": "vite preview",
+    "db:generate": "drizzle-kit generate --out ./drizzle",
+    "db:push": "drizzle-kit push",
+    "db:pull": "drizzle-kit pull",
+    "db:reset": "drizzle-kit reset",
+    "db:seed": "drizzle-kit seed"
   }
 }
