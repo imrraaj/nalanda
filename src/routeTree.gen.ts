@@ -13,6 +13,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StudentsSignUpRouteImport } from './routes/students/sign-up'
 import { Route as StudentsSignInRouteImport } from './routes/students/sign-in'
+import { Route as ApiUploadsRouteImport } from './routes/api/uploads'
 import { Route as AdminSignInRouteImport } from './routes/admin/sign-in'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
@@ -36,6 +37,11 @@ const StudentsSignInRoute = StudentsSignInRouteImport.update({
   path: '/students/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiUploadsRoute = ApiUploadsRouteImport.update({
+  id: '/api/uploads',
+  path: '/api/uploads',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminSignInRoute = AdminSignInRouteImport.update({
   id: '/admin/sign-in',
   path: '/admin/sign-in',
@@ -51,6 +57,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/admin/sign-in': typeof AdminSignInRoute
+  '/api/uploads': typeof ApiUploadsRoute
   '/students/sign-in': typeof StudentsSignInRoute
   '/students/sign-up': typeof StudentsSignUpRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/admin/sign-in': typeof AdminSignInRoute
+  '/api/uploads': typeof ApiUploadsRoute
   '/students/sign-in': typeof StudentsSignInRoute
   '/students/sign-up': typeof StudentsSignUpRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/admin/sign-in': typeof AdminSignInRoute
+  '/api/uploads': typeof ApiUploadsRoute
   '/students/sign-in': typeof StudentsSignInRoute
   '/students/sign-up': typeof StudentsSignUpRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -78,6 +87,7 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/admin/sign-in'
+    | '/api/uploads'
     | '/students/sign-in'
     | '/students/sign-up'
     | '/api/auth/$'
@@ -86,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/admin/sign-in'
+    | '/api/uploads'
     | '/students/sign-in'
     | '/students/sign-up'
     | '/api/auth/$'
@@ -94,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/admin/sign-in'
+    | '/api/uploads'
     | '/students/sign-in'
     | '/students/sign-up'
     | '/api/auth/$'
@@ -103,6 +115,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
   AdminSignInRoute: typeof AdminSignInRoute
+  ApiUploadsRoute: typeof ApiUploadsRoute
   StudentsSignInRoute: typeof StudentsSignInRoute
   StudentsSignUpRoute: typeof StudentsSignUpRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -138,6 +151,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudentsSignInRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/uploads': {
+      id: '/api/uploads'
+      path: '/api/uploads'
+      fullPath: '/api/uploads'
+      preLoaderRoute: typeof ApiUploadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/sign-in': {
       id: '/admin/sign-in'
       path: '/admin/sign-in'
@@ -159,6 +179,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
   AdminSignInRoute: AdminSignInRoute,
+  ApiUploadsRoute: ApiUploadsRoute,
   StudentsSignInRoute: StudentsSignInRoute,
   StudentsSignUpRoute: StudentsSignUpRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
