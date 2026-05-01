@@ -15,7 +15,9 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as StudentsSignUpRouteImport } from './routes/students/sign-up'
 import { Route as StudentsSignInRouteImport } from './routes/students/sign-in'
 import { Route as ApiUploadsRouteImport } from './routes/api/uploads'
+import { Route as ApiAdminRouteImport } from './routes/api/admin'
 import { Route as AdminSignInRouteImport } from './routes/admin/sign-in'
+import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as ApiDocumentsContentRouteImport } from './routes/api/documents/content'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
@@ -49,9 +51,19 @@ const ApiUploadsRoute = ApiUploadsRouteImport.update({
   path: '/api/uploads',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminRoute = ApiAdminRouteImport.update({
+  id: '/api/admin',
+  path: '/api/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminSignInRoute = AdminSignInRouteImport.update({
   id: '/admin/sign-in',
   path: '/admin/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminDashboardRoute = AdminDashboardRouteImport.update({
+  id: '/admin/dashboard',
+  path: '/admin/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiDocumentsContentRoute = ApiDocumentsContentRouteImport.update({
@@ -69,7 +81,9 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/reader': typeof ReaderRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/sign-in': typeof AdminSignInRoute
+  '/api/admin': typeof ApiAdminRoute
   '/api/uploads': typeof ApiUploadsRoute
   '/students/sign-in': typeof StudentsSignInRoute
   '/students/sign-up': typeof StudentsSignUpRoute
@@ -80,7 +94,9 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/reader': typeof ReaderRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/sign-in': typeof AdminSignInRoute
+  '/api/admin': typeof ApiAdminRoute
   '/api/uploads': typeof ApiUploadsRoute
   '/students/sign-in': typeof StudentsSignInRoute
   '/students/sign-up': typeof StudentsSignUpRoute
@@ -92,7 +108,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/reader': typeof ReaderRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/sign-in': typeof AdminSignInRoute
+  '/api/admin': typeof ApiAdminRoute
   '/api/uploads': typeof ApiUploadsRoute
   '/students/sign-in': typeof StudentsSignInRoute
   '/students/sign-up': typeof StudentsSignUpRoute
@@ -105,7 +123,9 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/reader'
+    | '/admin/dashboard'
     | '/admin/sign-in'
+    | '/api/admin'
     | '/api/uploads'
     | '/students/sign-in'
     | '/students/sign-up'
@@ -116,7 +136,9 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/reader'
+    | '/admin/dashboard'
     | '/admin/sign-in'
+    | '/api/admin'
     | '/api/uploads'
     | '/students/sign-in'
     | '/students/sign-up'
@@ -127,7 +149,9 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/reader'
+    | '/admin/dashboard'
     | '/admin/sign-in'
+    | '/api/admin'
     | '/api/uploads'
     | '/students/sign-in'
     | '/students/sign-up'
@@ -139,7 +163,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
   ReaderRoute: typeof ReaderRoute
+  AdminDashboardRoute: typeof AdminDashboardRoute
   AdminSignInRoute: typeof AdminSignInRoute
+  ApiAdminRoute: typeof ApiAdminRoute
   ApiUploadsRoute: typeof ApiUploadsRoute
   StudentsSignInRoute: typeof StudentsSignInRoute
   StudentsSignUpRoute: typeof StudentsSignUpRoute
@@ -191,11 +217,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUploadsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin': {
+      id: '/api/admin'
+      path: '/api/admin'
+      fullPath: '/api/admin'
+      preLoaderRoute: typeof ApiAdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/sign-in': {
       id: '/admin/sign-in'
       path: '/admin/sign-in'
       fullPath: '/admin/sign-in'
       preLoaderRoute: typeof AdminSignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/dashboard': {
+      id: '/admin/dashboard'
+      path: '/admin/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/documents/content': {
@@ -219,7 +259,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
   ReaderRoute: ReaderRoute,
+  AdminDashboardRoute: AdminDashboardRoute,
   AdminSignInRoute: AdminSignInRoute,
+  ApiAdminRoute: ApiAdminRoute,
   ApiUploadsRoute: ApiUploadsRoute,
   StudentsSignInRoute: StudentsSignInRoute,
   StudentsSignUpRoute: StudentsSignUpRoute,

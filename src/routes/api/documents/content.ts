@@ -18,7 +18,7 @@ export const Route = createFileRoute("/api/documents/content")({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {
-        const { getSessionFromHeaders } = await import("@/lib/auth-server");
+        const { getSessionFromHeaders } = await import("@/lib/auth.server");
         const session = await getSessionFromHeaders(request.headers);
 
         if (!session) {
@@ -33,7 +33,7 @@ export const Route = createFileRoute("/api/documents/content")({
         }
 
         try {
-          const { documentStorage } = await import("@/bucket");
+          const { documentStorage } = await import("@/bucket/s3-storage");
           const document = await documentStorage.getDocumentContent(key);
           const headers = new Headers({
             "Cache-Control": "private, no-store, max-age=0",

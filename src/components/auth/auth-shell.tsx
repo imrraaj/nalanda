@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 
 import { BrandMark } from "@/components/brand-mark";
-import { Card } from "@/components/ui/card";
 
 type AuthShellProps = {
   title: string;
@@ -17,29 +16,31 @@ export function AuthShell({
   footer,
 }: AuthShellProps) {
   return (
-    <main className="image min-h-screen px-4 py-6 sm:px-6 lg:px-8">
-      <Card className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-6xl overflow-hidden border-white/12 bg-black/8 p-0 shadow-[0_40px_140px_rgba(0,0,0,0.45)] backdrop-blur-none lg:grid-cols-[420px_minmax(0,1fr)]">
-        <section className="flex flex-col justify-between bg-[linear-gradient(180deg,rgba(15,12,11,0.92),rgba(15,12,11,0.86))] p-8 sm:p-10">
-          <div className="space-y-10">
-            <BrandMark />
+    <div className="flex min-h-screen">
+      {/* Left form panel */}
+      <div className="flex w-full flex-col bg-background px-8 py-10 sm:px-12 lg:w-120 lg:flex-none lg:px-14">
+        <div className="mb-14">
+          <BrandMark />
+        </div>
 
-            <div className="space-y-4">
-              <h1 className="text-balance text-4xl leading-none tracking-tight text-white sm:text-5xl">
-                {title}
-              </h1>
-              <p className="max-w-sm text-sm leading-7 text-stone-400">
-                {description}
-              </p>
-            </div>
+        <div className="flex-1">
+          <h1 className="font-heading text-[1.85rem] font-normal leading-tight tracking-tight text-foreground">
+            {title}
+          </h1>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            {description}
+          </p>
 
-            <div>{children}</div>
-          </div>
+          <div className="mt-8">{children}</div>
+        </div>
 
-          {footer ? <div className="pt-8 text-sm text-stone-400">{footer}</div> : null}
-        </section>
+        {footer ? (
+          <div className="mt-10 text-center text-sm text-muted-foreground">{footer}</div>
+        ) : null}
+      </div>
 
-        <section className="auth-background relative hidden lg:block" />
-      </Card>
-    </main>
+      {/* Right scenic gradient panel */}
+      <div className="auth-scene relative hidden flex-1 lg:block" />
+    </div>
   );
 }

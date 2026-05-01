@@ -27,11 +27,9 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
 
-
     // Path aliases
-    "baseUrl": "./src",
     "paths": {
-      "@/*": ["*"]
-    }
-  }
+      "@/*": ["./src/*"],
+    },
+  },
 }

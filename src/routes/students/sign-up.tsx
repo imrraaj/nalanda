@@ -1,106 +1,85 @@
-import { Link, createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { startTransition, useState } from "react";
+import { Link, createFileRoute, redirect } from "@tanstack/react-router";
+import { useState } from "react";
 
 import { AuthShell } from "@/components/auth/auth-shell";
-import { CredentialField } from "@/components/auth/credential-field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { authClient } from "@/lib/auth-client";
-import { getSession } from "@/lib/auth-session";
+import { Input } from "@/components/ui/input";
+import { authClient } from "@/lib/auth.client";
+import { getSession } from "@/lib/auth.function";
 import { deriveNameFromEmail } from "@/lib/utils";
 
 export const Route = createFileRoute("/students/sign-up")({
   beforeLoad: async () => {
     const session = await getSession();
-
-    if (session) {
-      throw redirect({ to: "/dashboard" });
-    }
+    if (session) throw redirect({ to: "/dashboard" });
   },
   component: StudentSignUpPage,
 });
 
 function StudentSignUpPage() {
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
     setErrorMessage(null);
     setIsSubmitting(true);
-
     try {
-      const result = await authClient.signUp.email({
-        name: deriveNameFromEmail(email),
-        email: email.trim(),
-        password,
-      });
-
-      if (result.error) {
-        setErrorMessage(result.error.message);
-        return;
-      }
-
-      startTransition(() => {
-        void navigate({ to: "/dashboard" });
-      });
+      const result = await authClient.signUp.email({ name: deriveNameFromEmail(email), email: email.trim(), password });
+      if (result.error) { setErrorMessage(result.error.message ?? "Sign up failed."); return; }
+      setSuccess(true);
     } catch {
-      setErrorMessage("Student signup is unavailable right now. Try again shortly.");
+      setErrorMessage("Sign up unavailable. Try again shortly.");
     } finally {
       setIsSubmitting(false);
     }
   }
 
+  if (success) {
+    return (
+      <AuthShell
+        title="Account created"
+        description="Your account is pending admin approval. You'll be able to sign in once approved."
+        footer={
+          <p>
+            <Link to="/students/sign-in" className="text-primary hover:underline">Back to sign in</Link>
+          </p>
+        }
+      >
+        <div className="border border-primary/20 bg-primary/5 p-4 text-sm text-foreground">
+          An administrator will review your request shortly.
+        </div>
+      </AuthShell>
+    );
+  }
+
   return (
     <AuthShell
       title="Create account"
-      description="Sign up to request access to Memoir."
+      description="Sign up to request access to the Memoir library."
       footer={
         <p>
           Already have an account?{" "}
-          <Link to="/students/sign-in" className="text-orange-300 transition hover:text-orange-200">
-            Sign in
-          </Link>
+          <Link to="/students/sign-in" className="text-primary hover:underline">Sign in</Link>
         </p>
       }
     >
-      <form className="space-y-5" method="post" onSubmit={handleSubmit}>
-        <CredentialField
-          autoComplete="email"
-          disabled={isSubmitting}
-          label="Email"
-          name="email"
-          onChange={(event) => setEmail(event.target.value)}
-          placeholder="Enter your email"
-          required
-          type="email"
-          value={email}
-        />
-
-        <CredentialField
-          autoComplete="new-password"
-          disabled={isSubmitting}
-          label="Password"
-          name="password"
-          onChange={(event) => setPassword(event.target.value)}
-          placeholder="Create a password"
-          required
-          type="password"
-          value={password}
-        />
-
-        {errorMessage ? (
-          <Alert variant="destructive">
-            <AlertDescription>{errorMessage}</AlertDescription>
-          </Alert>
-        ) : null}
-
-        <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
-          {isSubmitting ? "Creating account..." : "Create account"}
+      <form className="space-y-5" onSubmit={handleSubmit}>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium uppercase tracking-widest text-muted-foreground" htmlFor="email">Email</label>
+          <Input id="email" autoComplete="email" className="h-11 border-border bg-input text-foreground placeholder:text-muted-foreground/60" disabled={isSubmitting} onChange={(e) => setEmail(((e.currentTarget as unknown) as { value: string }).value)} placeholder="you@example.com" required type="email" value={email} />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium uppercase tracking-widest text-muted-foreground" htmlFor="password">Password</label>
+          <Input id="password" autoComplete="new-password" className="h-11 border-border bg-input text-foreground placeholder:text-muted-foreground/60" disabled={isSubmitting} onChange={(e) => setPassword(((e.currentTarget as unknown) as { value: string }).value)} placeholder="Create a password" required type="password" value={password} />
+        </div>
+        {errorMessage ? <Alert variant="destructive"><AlertDescription>{errorMessage}</AlertDescription></Alert> : null}
+        <Button className="mt-1 h-11 w-full font-semibold" disabled={isSubmitting} type="submit">
+          {isSubmitting ? "Creating account…" : "Create account"}
         </Button>
       </form>
     </AuthShell>

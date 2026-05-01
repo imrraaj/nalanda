@@ -96,7 +96,7 @@ export const Route = createFileRoute("/reader")({
     name: typeof search.name === "string" ? search.name : "",
   }),
   beforeLoad: async ({ search }) => {
-    const { getSession } = await import("@/lib/auth-session");
+    const { getSession } = await import("@/lib/auth.function");
     const session = await getSession();
 
     if (!session) {
@@ -388,9 +388,9 @@ function ReaderPage() {
   }
 
   return (
-    <main aria-label={`${displayName} reader`} className="px-4 py-4 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-[120rem]">
-        <Card className="memoir-pdf-shell flex h-[calc(100vh-2rem)] flex-col overflow-hidden p-0">
+    <main aria-label={`${displayName} reader`} className="h-screen">
+      <div className="h-full">
+        <Card className="memoir-pdf-shell flex h-full flex-col overflow-hidden rounded-none border-0 p-0">
           <div className="border-b border-white/10 bg-black/26 px-3 py-3 backdrop-blur-sm sm:px-4">
             <div className="flex flex-wrap items-center gap-2">
               <Button

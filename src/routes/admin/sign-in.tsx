@@ -2,19 +2,16 @@ import { Link, createFileRoute, redirect, useNavigate } from "@tanstack/react-ro
 import { startTransition, useState } from "react";
 
 import { AuthShell } from "@/components/auth/auth-shell";
-import { CredentialField } from "@/components/auth/credential-field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { authClient } from "@/lib/auth-client";
-import { getSession } from "@/lib/auth-session";
+import { Input } from "@/components/ui/input";
+import { authClient } from "@/lib/auth.client";
+import { getSession } from "@/lib/auth.function";
 
 export const Route = createFileRoute("/admin/sign-in")({
   beforeLoad: async () => {
     const session = await getSession();
-
-    if (session) {
-      throw redirect({ to: "/dashboard" });
-    }
+    if (session) throw redirect({ to: "/admin/dashboard" });
   },
   component: AdminSignInPage,
 });
@@ -28,27 +25,14 @@ function AdminSignInPage() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
     setErrorMessage(null);
     setIsSubmitting(true);
-
     try {
-      const result = await authClient.signIn.email({
-        email: email.trim(),
-        password,
-        rememberMe: true,
-      });
-
-      if (result.error) {
-        setErrorMessage(result.error.message);
-        return;
-      }
-
-      startTransition(() => {
-        void navigate({ to: "/dashboard" });
-      });
+      const result = await authClient.signIn.email({ email: email.trim(), password });
+      if (result.error) { setErrorMessage(result.error.message ?? "Invalid credentials."); return; }
+      startTransition(() => { void navigate({ to: "/admin/dashboard" }); });
     } catch {
-      setErrorMessage("Faculty sign in failed. Try again shortly.");
+      setErrorMessage("Sign in unavailable. Try again shortly.");
     } finally {
       setIsSubmitting(false);
     }
@@ -57,49 +41,26 @@ function AdminSignInPage() {
   return (
     <AuthShell
       title="Faculty sign in"
-      description="Sign in to review and manage Memoir."
+      description="Access the Memoir dashboard to manage documents."
       footer={
         <p>
-          Student access?{" "}
-          <Link to="/students/sign-in" className="text-orange-300 transition hover:text-orange-200">
-            Student sign in
-          </Link>
+          Student?{" "}
+          <Link to="/students/sign-in" className="text-primary hover:underline">Sign in here</Link>
         </p>
       }
     >
-      <form className="space-y-5" method="post" onSubmit={handleSubmit}>
-        <CredentialField
-          autoComplete="email"
-          disabled={isSubmitting}
-          label="Email"
-          name="email"
-          onChange={(event) => setEmail(event.target.value)}
-          placeholder="Enter your faculty email"
-          required
-          type="email"
-          value={email}
-        />
-
-        <CredentialField
-          autoComplete="current-password"
-          disabled={isSubmitting}
-          label="Password"
-          name="password"
-          onChange={(event) => setPassword(event.target.value)}
-          placeholder="Enter your password"
-          required
-          type="password"
-          value={password}
-        />
-
-        {errorMessage ? (
-          <Alert variant="destructive">
-            <AlertDescription>{errorMessage}</AlertDescription>
-          </Alert>
-        ) : null}
-
-        <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
-          {isSubmitting ? "Signing in..." : "Sign in as faculty"}
+      <form className="space-y-5" onSubmit={handleSubmit}>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium uppercase tracking-widest text-muted-foreground" htmlFor="email">Email</label>
+          <Input id="email" autoComplete="email" className="h-11 border-border bg-input text-foreground placeholder:text-muted-foreground/60" disabled={isSubmitting} onChange={(e) => setEmail(((e.currentTarget as unknown) as { value: string }).value)} placeholder="faculty@institution.edu" required type="email" value={email} />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium uppercase tracking-widest text-muted-foreground" htmlFor="password">Password</label>
+          <Input id="password" autoComplete="current-password" className="h-11 border-border bg-input text-foreground placeholder:text-muted-foreground/60" disabled={isSubmitting} onChange={(e) => setPassword(((e.currentTarget as unknown) as { value: string }).value)} placeholder="••••••••" required type="password" value={password} />
+        </div>
+        {errorMessage ? <Alert variant="destructive"><AlertDescription>{errorMessage}</AlertDescription></Alert> : null}
+        <Button className="mt-1 h-11 w-full font-semibold" disabled={isSubmitting} type="submit">
+          {isSubmitting ? "Signing in…" : "Sign in"}
         </Button>
       </form>
     </AuthShell>

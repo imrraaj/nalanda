@@ -1,217 +1,62 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 
 import { BrandMark } from "@/components/brand-mark";
-import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-
-const workflowCards = [
-  {
-    title: "Student onboarding",
-    copy: "Signup stays simple, but access can be held behind approval before the reader opens.",
-  },
-  {
-    title: "Faculty review queue",
-    copy: "Every uploaded document has a moderation lane before it becomes visible to the wider cohort.",
-  },
-  {
-    title: "Protected reading room",
-    copy: "Material is shaped for a controlled reader surface instead of default file downloads.",
-  },
-];
-
-const readerPreview = [
-  { label: "Active readers", value: "124" },
-  { label: "Pending reviews", value: "11" },
-  { label: "Published documents", value: "34" },
-];
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({
-  component: Home,
+  component: HomePage,
 });
 
-function Home() {
+function HomePage() {
   return (
-    <main className="min-h-screen px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <Card className="overflow-hidden p-0 shadow-[0_40px_120px_rgba(0,0,0,0.35)]">
-          <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="p-6 sm:p-8 lg:p-10">
-              <div className="flex flex-col gap-6">
-                <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <BrandMark />
-
-                  <div className="flex flex-wrap gap-3">
-                    <Link
-                      className={buttonVariants({ size: "sm", variant: "outline" })}
-                      to="/students/sign-in"
-                    >
-                      Student sign in
-                    </Link>
-                    <Link
-                      className={buttonVariants({ size: "sm", variant: "outline" })}
-                      to="/admin/sign-in"
-                    >
-                      Faculty sign in
-                    </Link>
-                  </div>
-                </header>
-
-                <div className="space-y-5 pt-8">
-                  <Badge
-                    className="px-4 py-2 font-mono text-[0.72rem] uppercase tracking-[0.3em] text-orange-200/80"
-                    variant="warm"
-                  >
-                    LMS Reading Room
-                  </Badge>
-
-                  <div className="space-y-4">
-                    <h1 className="text-balance max-w-4xl text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
-                      Moderated student access, curated documents, and a cleaner LMS library surface.
-                    </h1>
-                    <p className="max-w-2xl text-base leading-8 text-stone-400">
-                      Memoir is structured around approval-first accounts,
-                      faculty-reviewed uploads, and a protected reading
-                      interface. Students request access, professors approve the
-                      flow, and only reviewed material reaches the shared
-                      catalog.
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap gap-3 pt-2">
-                    <Link className={buttonVariants({ size: "lg" })} to="/students/sign-up">
-                      Create student account
-                    </Link>
-                    <Link
-                      className={buttonVariants({ size: "lg", variant: "outline" })}
-                      to="/dashboard"
-                    >
-                      Open dashboard
-                    </Link>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 pt-6 md:grid-cols-3">
-                  {readerPreview.map((item) => (
-                    <Card
-                      key={item.label}
-                      className="border-white/10 bg-black/16 shadow-none backdrop-blur-none"
-                    >
-                      <CardContent className="p-5">
-                        <p className="font-mono text-[0.68rem] uppercase tracking-[0.32em] text-orange-200/70">
-                          {item.label}
-                        </p>
-                        <p className="mt-4 text-3xl font-semibold text-white">
-                          {item.value}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="relative min-h-[26rem] overflow-hidden border-t border-white/10 lg:border-t-0 lg:border-l">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(253,186,116,0.16),transparent_22%),linear-gradient(145deg,#33090a_0%,#a52516_40%,#d45016_72%,#661310_100%)]" />
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,5,0.08),rgba(5,5,5,0.45))]" />
-              <div className="absolute left-8 top-8 h-56 w-56 rounded-xs bg-black/28 blur-3xl" />
-              <div className="absolute -bottom-10 right-8 h-72 w-72 rounded-xs bg-orange-200/10 blur-3xl" />
-
-              <div className="relative z-10 flex h-full flex-col justify-between p-8 sm:p-10">
-                <div className="flex justify-end">
-                  <Badge
-                    className="px-4 py-2 font-mono text-[0.68rem] uppercase tracking-[0.3em] text-orange-50/75"
-                    variant="outline"
-                  >
-                    Guided Access
-                  </Badge>
-                </div>
-
-                <div className="mx-auto flex w-full max-w-sm items-center justify-center">
-                  <div className="relative h-[24rem] w-[18rem]">
-                    <div className="absolute inset-x-2 bottom-0 h-16 rounded-xs bg-black/30 blur-2xl" />
-                    <Card className="relative mx-auto flex h-[20rem] w-[16rem] items-end justify-center border-white/15 bg-slate-900/80 p-5 shadow-[0_35px_110px_rgba(0,0,0,0.45)] backdrop-blur-none">
-                      <Card className="flex h-52 w-44 flex-col border-stone-700/70 bg-[#1b1d24] p-4 shadow-none backdrop-blur-none">
-                        <div className="rounded-xs border border-stone-700 bg-[#efd07d] px-4 py-5 text-stone-900">
-                          <div className="font-mono text-[0.68rem] uppercase tracking-[0.35em] text-stone-600">
-                            Reader
-                          </div>
-                          <div className="mt-6 text-2xl font-semibold tracking-[0.24em]">
-                            MEMOIR
-                          </div>
-                        </div>
-                        <div className="mt-auto flex items-center justify-between px-1 font-mono text-[0.68rem] uppercase tracking-[0.26em] text-stone-500">
-                          <span>Review</span>
-                          <span>Publish</span>
-                        </div>
-                      </Card>
-                      <div className="absolute bottom-3 h-3 w-16 rounded-xs bg-[#6a3029]" />
-                    </Card>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <p className="font-mono text-[0.68rem] uppercase tracking-[0.32em] text-orange-50/70">
-                    Product direction
-                  </p>
-                  <p className="max-w-lg text-sm leading-7 text-orange-50/80">
-                    Use separate student and faculty entry points, funnel every
-                    upload through review, then publish only approved material
-                    into the shared reading room.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-          <Card>
-            <CardHeader className="p-6 sm:p-8">
-              <p className="font-mono text-[0.68rem] uppercase tracking-[0.32em] text-orange-200/70">
-                Core workflow
-              </p>
-            </CardHeader>
-
-            <CardContent className="grid gap-4 p-6 pt-0 sm:p-8 sm:pt-0 md:grid-cols-3">
-              {workflowCards.map((card) => (
-                <Card
-                  key={card.title}
-                  className="border-white/10 bg-black/14 shadow-none backdrop-blur-none"
-                >
-                  <CardHeader className="p-5">
-                    <CardTitle className="text-lg">{card.title}</CardTitle>
-                    <CardDescription>{card.copy}</CardDescription>
-                  </CardHeader>
-                </Card>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="p-6 sm:p-8">
-              <p className="font-mono text-[0.68rem] uppercase tracking-[0.32em] text-orange-200/70">
-                Ready now
-              </p>
-              <CardTitle className="mt-2">
-                Separate auth entry points plus a protected dashboard scaffold.
-              </CardTitle>
-              <CardDescription>
-                This first pass gives you student signup, student sign in, admin
-                sign in, and a protected dashboard with the right visual
-                direction. The next natural step is real role and approval status
-                persistence on the user model.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </section>
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-background px-4">
+      {/* Ambient glow */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-1/2 top-1/3 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/8 blur-[120px]" />
+        <div className="absolute bottom-1/4 right-1/4 h-[300px] w-[300px] rounded-full bg-primary/5 blur-[100px]" />
       </div>
-    </main>
+
+      <div className="relative z-10 flex flex-col items-center text-center">
+        <BrandMark className="mb-8 scale-125" />
+
+        <Badge text="Academic document platform" />
+
+        <h1 className="mt-5 max-w-xl font-heading text-4xl font-normal tracking-tight sm:text-5xl">
+          <span className="bg-gradient-to-r from-foreground via-foreground/90 to-primary bg-clip-text text-transparent">
+            Read. Learn. Grow.
+          </span>
+        </h1>
+
+        <p className="mt-4 max-w-md text-base text-muted-foreground">
+          A curated library of academic material — managed by faculty, accessible to students.
+        </p>
+
+        <div className="mt-8 flex gap-3">
+          <Button size="lg" className="h-11 px-6 font-semibold">
+            <Link to="/students/sign-in">Get started</Link>
+          </Button>
+          <Button variant="outline" size="lg" className="h-11 px-6">
+            <Link to="/admin/sign-in">Faculty access</Link>
+          </Button>
+        </div>
+
+        {/* Feature pills */}
+        <div className="mt-12 flex flex-wrap justify-center gap-2">
+          {["PDF Reader", "Faculty Uploads", "Student Access", "Secure Auth"].map((f) => (
+            <span key={f} className="border border-border/60 bg-card/50 px-3 py-1 text-xs text-muted-foreground backdrop-blur">
+              {f}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Badge({ text }: { text: string }) {
+  return (
+    <span className="inline-flex items-center border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+      {text}
+    </span>
   );
 }
