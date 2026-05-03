@@ -9,21 +9,30 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ReaderRouteImport } from './routes/reader'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as StudentsSignUpRouteImport } from './routes/students/sign-up'
-import { Route as StudentsSignInRouteImport } from './routes/students/sign-in'
 import { Route as ApiUploadsRouteImport } from './routes/api/uploads'
 import { Route as ApiAdminRouteImport } from './routes/api/admin'
-import { Route as AdminSignInRouteImport } from './routes/admin/sign-in'
 import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as ApiDocumentsContentRouteImport } from './routes/api/documents/content'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReaderRoute = ReaderRouteImport.update({
   id: '/reader',
   path: '/reader',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -36,16 +45,6 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const StudentsSignUpRoute = StudentsSignUpRouteImport.update({
-  id: '/students/sign-up',
-  path: '/students/sign-up',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StudentsSignInRoute = StudentsSignInRouteImport.update({
-  id: '/students/sign-in',
-  path: '/students/sign-in',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiUploadsRoute = ApiUploadsRouteImport.update({
   id: '/api/uploads',
   path: '/api/uploads',
@@ -54,11 +53,6 @@ const ApiUploadsRoute = ApiUploadsRouteImport.update({
 const ApiAdminRoute = ApiAdminRouteImport.update({
   id: '/api/admin',
   path: '/api/admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminSignInRoute = AdminSignInRouteImport.update({
-  id: '/admin/sign-in',
-  path: '/admin/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
@@ -80,26 +74,24 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/login': typeof LoginRoute
   '/reader': typeof ReaderRoute
+  '/signup': typeof SignupRoute
   '/admin/dashboard': typeof AdminDashboardRoute
-  '/admin/sign-in': typeof AdminSignInRoute
   '/api/admin': typeof ApiAdminRoute
   '/api/uploads': typeof ApiUploadsRoute
-  '/students/sign-in': typeof StudentsSignInRoute
-  '/students/sign-up': typeof StudentsSignUpRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/documents/content': typeof ApiDocumentsContentRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/login': typeof LoginRoute
   '/reader': typeof ReaderRoute
+  '/signup': typeof SignupRoute
   '/admin/dashboard': typeof AdminDashboardRoute
-  '/admin/sign-in': typeof AdminSignInRoute
   '/api/admin': typeof ApiAdminRoute
   '/api/uploads': typeof ApiUploadsRoute
-  '/students/sign-in': typeof StudentsSignInRoute
-  '/students/sign-up': typeof StudentsSignUpRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/documents/content': typeof ApiDocumentsContentRoute
 }
@@ -107,13 +99,12 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/login': typeof LoginRoute
   '/reader': typeof ReaderRoute
+  '/signup': typeof SignupRoute
   '/admin/dashboard': typeof AdminDashboardRoute
-  '/admin/sign-in': typeof AdminSignInRoute
   '/api/admin': typeof ApiAdminRoute
   '/api/uploads': typeof ApiUploadsRoute
-  '/students/sign-in': typeof StudentsSignInRoute
-  '/students/sign-up': typeof StudentsSignUpRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/documents/content': typeof ApiDocumentsContentRoute
 }
@@ -122,39 +113,36 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dashboard'
+    | '/login'
     | '/reader'
+    | '/signup'
     | '/admin/dashboard'
-    | '/admin/sign-in'
     | '/api/admin'
     | '/api/uploads'
-    | '/students/sign-in'
-    | '/students/sign-up'
     | '/api/auth/$'
     | '/api/documents/content'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/dashboard'
+    | '/login'
     | '/reader'
+    | '/signup'
     | '/admin/dashboard'
-    | '/admin/sign-in'
     | '/api/admin'
     | '/api/uploads'
-    | '/students/sign-in'
-    | '/students/sign-up'
     | '/api/auth/$'
     | '/api/documents/content'
   id:
     | '__root__'
     | '/'
     | '/dashboard'
+    | '/login'
     | '/reader'
+    | '/signup'
     | '/admin/dashboard'
-    | '/admin/sign-in'
     | '/api/admin'
     | '/api/uploads'
-    | '/students/sign-in'
-    | '/students/sign-up'
     | '/api/auth/$'
     | '/api/documents/content'
   fileRoutesById: FileRoutesById
@@ -162,24 +150,37 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
+  LoginRoute: typeof LoginRoute
   ReaderRoute: typeof ReaderRoute
+  SignupRoute: typeof SignupRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
-  AdminSignInRoute: typeof AdminSignInRoute
   ApiAdminRoute: typeof ApiAdminRoute
   ApiUploadsRoute: typeof ApiUploadsRoute
-  StudentsSignInRoute: typeof StudentsSignInRoute
-  StudentsSignUpRoute: typeof StudentsSignUpRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiDocumentsContentRoute: typeof ApiDocumentsContentRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reader': {
       id: '/reader'
       path: '/reader'
       fullPath: '/reader'
       preLoaderRoute: typeof ReaderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -196,20 +197,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/students/sign-up': {
-      id: '/students/sign-up'
-      path: '/students/sign-up'
-      fullPath: '/students/sign-up'
-      preLoaderRoute: typeof StudentsSignUpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/students/sign-in': {
-      id: '/students/sign-in'
-      path: '/students/sign-in'
-      fullPath: '/students/sign-in'
-      preLoaderRoute: typeof StudentsSignInRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/uploads': {
       id: '/api/uploads'
       path: '/api/uploads'
@@ -222,13 +209,6 @@ declare module '@tanstack/react-router' {
       path: '/api/admin'
       fullPath: '/api/admin'
       preLoaderRoute: typeof ApiAdminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/sign-in': {
-      id: '/admin/sign-in'
-      path: '/admin/sign-in'
-      fullPath: '/admin/sign-in'
-      preLoaderRoute: typeof AdminSignInRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/dashboard': {
@@ -258,13 +238,12 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
+  LoginRoute: LoginRoute,
   ReaderRoute: ReaderRoute,
+  SignupRoute: SignupRoute,
   AdminDashboardRoute: AdminDashboardRoute,
-  AdminSignInRoute: AdminSignInRoute,
   ApiAdminRoute: ApiAdminRoute,
   ApiUploadsRoute: ApiUploadsRoute,
-  StudentsSignInRoute: StudentsSignInRoute,
-  StudentsSignUpRoute: StudentsSignUpRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiDocumentsContentRoute: ApiDocumentsContentRoute,
 }

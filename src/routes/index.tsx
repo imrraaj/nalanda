@@ -12,8 +12,8 @@ function HomePage() {
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-background px-4">
       {/* Ambient glow */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-1/2 top-1/3 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/8 blur-[120px]" />
-        <div className="absolute bottom-1/4 right-1/4 h-[300px] w-[300px] rounded-full bg-primary/5 blur-[100px]" />
+        <div className="absolute left-1/2 top-1/3 h-150 w-150 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/8 blur-[120px]" />
+        <div className="absolute bottom-1/4 right-1/4 h-75 w-75 rounded-full bg-primary/5 blur-[100px]" />
       </div>
 
       <div className="relative z-10 flex flex-col items-center text-center">
@@ -22,7 +22,7 @@ function HomePage() {
         <Badge text="Academic document platform" />
 
         <h1 className="mt-5 max-w-xl font-heading text-4xl font-normal tracking-tight sm:text-5xl">
-          <span className="bg-gradient-to-r from-foreground via-foreground/90 to-primary bg-clip-text text-transparent">
+          <span className="bg-linear-to-r from-foreground via-foreground/90 to-primary bg-clip-text text-transparent">
             Read. Learn. Grow.
           </span>
         </h1>
@@ -33,10 +33,10 @@ function HomePage() {
 
         <div className="mt-8 flex gap-3">
           <Button size="lg" className="h-11 px-6 font-semibold">
-            <Link to="/students/sign-in">Get started</Link>
+            <Link to="/login">Log in</Link>
           </Button>
           <Button variant="outline" size="lg" className="h-11 px-6">
-            <Link to="/admin/sign-in">Faculty access</Link>
+            <Link to="/signup">Create account</Link>
           </Button>
         </div>
 

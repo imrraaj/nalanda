@@ -8,12 +8,12 @@ import { Separator } from "@/components/ui/separator";
 import { authClient } from "@/lib/auth.client";
 import { getSession } from "@/lib/auth.function";
 import { formatBytes, getInitials } from "@/lib/utils";
-import { loadAdminDashboardData } from "@/routes/admin/-dashboard.function";
+import { loadAdminDashboardData } from "@/routes/admin/dashboard.function";
 
 export const Route = createFileRoute("/admin/dashboard")({
   beforeLoad: async () => {
     const session = await getSession();
-    if (!session) throw redirect({ to: "/admin/sign-in" });
+    if (!session) throw redirect({ to: "/login" });
     if (session.user.role !== "admin") throw redirect({ to: "/dashboard" });
   },
   loader: async () => loadAdminDashboardData(),
@@ -55,7 +55,7 @@ function AdminDashboardPage() {
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <BrandMark />
-            <Separator orientation="vertical" className="!h-5" />
+            <Separator orientation="vertical" className="h-5!" />
             <span className="text-sm text-muted-foreground">Admin</span>
           </div>
           <div className="flex items-center gap-3">

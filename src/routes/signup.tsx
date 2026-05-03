@@ -1,4 +1,4 @@
-import { Link, createFileRoute, redirect } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { AuthShell } from "@/components/auth/auth-shell";
@@ -6,18 +6,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth.client";
-import { getSession } from "@/lib/auth.function";
 import { deriveNameFromEmail } from "@/lib/utils";
 
-export const Route = createFileRoute("/students/sign-up")({
-  beforeLoad: async () => {
-    const session = await getSession();
-    if (session) throw redirect({ to: "/dashboard" });
-  },
-  component: StudentSignUpPage,
+export const Route = createFileRoute("/signup")({
+  component: SignUpPage,
 });
 
-function StudentSignUpPage() {
+function SignUpPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -28,9 +23,19 @@ function StudentSignUpPage() {
     event.preventDefault();
     setErrorMessage(null);
     setIsSubmitting(true);
+
     try {
-      const result = await authClient.signUp.email({ name: deriveNameFromEmail(email), email: email.trim(), password });
-      if (result.error) { setErrorMessage(result.error.message ?? "Sign up failed."); return; }
+      const result = await authClient.signUp.email({
+        email: email.trim(),
+        name: deriveNameFromEmail(email),
+        password,
+      });
+
+      if (result?.error) {
+        setErrorMessage(result.error.message ?? "Sign up failed.");
+        return;
+      }
+
       setSuccess(true);
     } catch {
       setErrorMessage("Sign up unavailable. Try again shortly.");
@@ -46,7 +51,7 @@ function StudentSignUpPage() {
         description="Your account is pending admin approval. You'll be able to sign in once approved."
         footer={
           <p>
-            <Link to="/students/sign-in" className="text-primary hover:underline">Back to sign in</Link>
+            <Link to="/login" className="text-primary hover:underline">Back to sign in</Link>
           </p>
         }
       >
@@ -60,11 +65,11 @@ function StudentSignUpPage() {
   return (
     <AuthShell
       title="Create account"
-      description="Sign up to request access to the Memoir library."
+      description="Create a student account to request access to the Memoir library."
       footer={
         <p>
           Already have an account?{" "}
-          <Link to="/students/sign-in" className="text-primary hover:underline">Sign in</Link>
+          <Link to="/login" className="text-primary hover:underline">Sign in</Link>
         </p>
       }
     >

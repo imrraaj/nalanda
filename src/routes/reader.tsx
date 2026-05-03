@@ -100,7 +100,7 @@ export const Route = createFileRoute("/reader")({
     const session = await getSession();
 
     if (!session) {
-      throw redirect({ to: "/students/sign-in" });
+      throw redirect({ to: "/login" });
     }
 
     if (!search.key) {

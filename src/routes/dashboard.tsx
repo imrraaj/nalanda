@@ -15,7 +15,7 @@ import { formatBytes, formatDateTime, getInitials } from "@/lib/utils";
 export const Route = createFileRoute("/dashboard")({
   beforeLoad: async () => {
     const session = await getSession();
-    if (!session) throw redirect({ to: "/students/sign-in" });
+    if (!session) throw redirect({ to: "/login" });
   },
   component: DashboardPage,
 });
@@ -73,7 +73,7 @@ function DashboardPage() {
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <BrandMark />
-            <Separator orientation="vertical" className="!h-5" />
+            <Separator orientation="vertical" className="h-5!" />
             <span className="text-sm text-muted-foreground">Dashboard</span>
           </div>
           <div className="flex items-center gap-3">
@@ -92,7 +92,7 @@ function DashboardPage() {
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
         {/* Hero */}
-        <div className="mb-8 border-b border-border/50 bg-gradient-to-br from-primary/5 via-background to-background pb-6">
+        <div className="mb-8 border-b border-border/50 bg-linear-to-br from-primary/5 via-background to-background pb-6">
           <h1 className="font-heading text-2xl font-normal tracking-tight">Welcome back{user ? `, ${user.name.split(" ")[0]}` : ""}</h1>
           <p className="mt-1 text-sm text-muted-foreground">Manage and upload documents to the Memoir library.</p>
         </div>
