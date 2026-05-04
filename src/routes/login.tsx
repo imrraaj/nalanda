@@ -5,7 +5,7 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { authClient } from "@/lib/auth.client";
+import { signInWithEmail } from "@/lib/auth.actions";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -24,7 +24,7 @@ function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const result = await authClient.signIn.email({
+      const result = await signInWithEmail({
         email: email.trim(),
         password,
         rememberMe: true,

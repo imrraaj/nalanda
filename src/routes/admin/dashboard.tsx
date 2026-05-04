@@ -5,26 +5,45 @@ import { BrandMark } from "@/components/brand-mark";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { authClient } from "@/lib/auth.client";
-import { getSession } from "@/lib/auth.function";
+import { signOut } from "@/lib/auth.actions";
 import { formatBytes, getInitials } from "@/lib/utils";
-import { loadAdminDashboardData } from "@/routes/admin/dashboard.function";
 
 export const Route = createFileRoute("/admin/dashboard")({
   beforeLoad: async () => {
+    const { getSession } = await import("@/lib/auth.function");
     const session = await getSession();
     if (!session) throw redirect({ to: "/login" });
-    if (session.user.role !== "admin") throw redirect({ to: "/dashboard" });
+    if ((session.user as { role?: string }).role !== "admin") throw redirect({ to: "/dashboard" });
   },
-  loader: async () => loadAdminDashboardData(),
+  loader: async () => {
+    const [{ getSession }, { loadAdminDashboardData }] = await Promise.all([
+      import("@/lib/auth.function"),
+      import("@/routes/admin/-dashboard.function"),
+    ]);
+    const [session, data] = await Promise.all([getSession(), loadAdminDashboardData()]);
+
+    if (!session) {
+      throw redirect({ to: "/login" });
+    }
+
+    if ((session.user as { role?: string }).role !== "admin") {
+      throw redirect({ to: "/dashboard" });
+    }
+
+    return {
+      ...data,
+      viewer: {
+        name: session.user.name,
+      },
+    };
+  },
   component: AdminDashboardPage,
 });
 
 function AdminDashboardPage() {
   const navigate = useNavigate();
   const router = useRouter();
-  const { data: sessionData } = authClient.useSession();
-  const { users, documents } = Route.useLoaderData();
+  const { users, documents, viewer } = Route.useLoaderData();
   const [tab, setTab] = useState<"users" | "documents">("documents");
 
   async function adminAction(action: string, id: string) {
@@ -42,10 +61,12 @@ function AdminDashboardPage() {
   }
 
   function handleSignOut() {
-    authClient.signOut().then(() => { startTransition(() => { void navigate({ to: "/" }); }); });
+    signOut().then(() => {
+      startTransition(() => {
+        void navigate({ to: "/" });
+      });
+    });
   }
-
-  const user = sessionData?.user;
   const pendingUsers = users.filter((u) => u.banned && u.role !== "admin");
   const pendingDocs = documents.filter((d) => d.status === "pending");
 
@@ -59,11 +80,9 @@ function AdminDashboardPage() {
             <span className="text-sm text-muted-foreground">Admin</span>
           </div>
           <div className="flex items-center gap-3">
-            {user && (
-              <div className="flex size-8 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
-                {getInitials(user.name)}
-              </div>
-            )}
+            <div className="flex size-8 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
+              {getInitials(viewer.name)}
+            </div>
             <Button variant="ghost" size="sm" onClick={handleSignOut}>Sign out</Button>
           </div>
         </div>

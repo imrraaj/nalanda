@@ -8,21 +8,36 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { authClient } from "@/lib/auth.client";
-import { getSession } from "@/lib/auth.function";
+import { signOut } from "@/lib/auth.actions";
 import { formatBytes, formatDateTime, getInitials } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard")({
   beforeLoad: async () => {
+    const { getSession } = await import("@/lib/auth.function");
     const session = await getSession();
     if (!session) throw redirect({ to: "/login" });
+  },
+  loader: async () => {
+    const { getSession } = await import("@/lib/auth.function");
+    const session = await getSession();
+
+    if (!session) {
+      throw redirect({ to: "/login" });
+    }
+
+    return {
+      viewer: {
+        name: session.user.name,
+        role: (session.user as { role?: string }).role ?? "user",
+      },
+    };
   },
   component: DashboardPage,
 });
 
 function DashboardPage() {
   const navigate = useNavigate();
-  const { data: sessionData } = authClient.useSession();
+  const { viewer } = Route.useLoaderData();
   const [documents, setDocuments] = useState<StoredDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -61,10 +76,12 @@ function DashboardPage() {
   }
 
   function handleSignOut() {
-    authClient.signOut().then(() => { startTransition(() => { void navigate({ to: "/" }); }); });
+    signOut().then(() => {
+      startTransition(() => {
+        void navigate({ to: "/" });
+      });
+    });
   }
-
-  const user = sessionData?.user;
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -77,14 +94,12 @@ function DashboardPage() {
             <span className="text-sm text-muted-foreground">Dashboard</span>
           </div>
           <div className="flex items-center gap-3">
-            {user && (user as any).role === "admin" && (
+            {viewer.role === "admin" && (
               <Link to="/admin/dashboard" className="text-xs text-primary hover:underline">Admin Panel</Link>
             )}
-            {user && (
-              <div className="flex size-8 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
-                {getInitials(user.name)}
-              </div>
-            )}
+            <div className="flex size-8 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
+              {getInitials(viewer.name)}
+            </div>
             <Button variant="ghost" size="sm" onClick={handleSignOut}>Sign out</Button>
           </div>
         </div>
@@ -93,7 +108,7 @@ function DashboardPage() {
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
         {/* Hero */}
         <div className="mb-8 border-b border-border/50 bg-linear-to-br from-primary/5 via-background to-background pb-6">
-          <h1 className="font-heading text-2xl font-normal tracking-tight">Welcome back{user ? `, ${user.name.split(" ")[0]}` : ""}</h1>
+          <h1 className="font-heading text-2xl font-normal tracking-tight">Welcome back, {viewer.name.split(" ")[0]}</h1>
           <p className="mt-1 text-sm text-muted-foreground">Manage and upload documents to the Memoir library.</p>
         </div>
 

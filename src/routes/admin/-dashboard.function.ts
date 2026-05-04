@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
-import { user, document } from "@/db/schema";
-import { db } from "@/db";
 
+import { db } from "@/db/index";
+import { document, user } from "@/db/schema";
 
 export const loadAdminDashboardData = createServerFn({ method: "GET" }).handler(async () => {
   const [users, documents] = await Promise.all([

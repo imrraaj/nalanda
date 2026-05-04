@@ -5,7 +5,7 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { authClient } from "@/lib/auth.client";
+import { signUpWithEmail } from "@/lib/auth.actions";
 import { deriveNameFromEmail } from "@/lib/utils";
 
 export const Route = createFileRoute("/signup")({
@@ -25,7 +25,7 @@ function SignUpPage() {
     setIsSubmitting(true);
 
     try {
-      const result = await authClient.signUp.email({
+      const result = await signUpWithEmail({
         email: email.trim(),
         name: deriveNameFromEmail(email),
         password,
