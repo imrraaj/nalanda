@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { desc, eq } from "drizzle-orm";
 
 function json(body: unknown, status = 200) {
   return Response.json(body, { status });
@@ -20,31 +19,21 @@ export const Route = createFileRoute("/api/uploads")({
           return json({ error: "Unauthorized" }, 401);
         }
 
-        const { db } = await import("@/db/index");
-        const { document } = await import("@/db/schema");
-        const isAdmin = (session.user as any).role === "admin";
+        const url = new URL(request.url);
+        const key = url.searchParams.get("key");
 
-        let docs;
-        if (isAdmin) {
-          docs = await db.select().from(document).orderBy(desc(document.createdAt));
-        } else {
-          docs = await db
-            .select()
-            .from(document)
-            .where(eq(document.status, "approved"))
-            .orderBy(desc(document.createdAt));
+        if (key) {
+          return json(
+            { error: "Direct document URLs are disabled. Open documents through the reader page." },
+            400,
+          );
         }
 
-        const documents = docs.map((d) => ({
-          bucket: "",
-          contentType: d.contentType,
-          key: d.key,
-          name: d.name,
-          size: d.size,
-          status: d.status,
-          uploadedAt: d.createdAt.toISOString(),
-          uploadedBy: d.uploadedBy,
-        }));
+        const mineOnly = url.searchParams.get("mine") === "true";
+        const { documentStorage } = await import("@/bucket");
+        const documents = await documentStorage.listDocuments({
+          uploadedBy: mineOnly ? session.user.id : undefined,
+        });
 
         return json({ documents });
       },
@@ -64,40 +53,13 @@ export const Route = createFileRoute("/api/uploads")({
         }
 
         try {
-          const { documentStorage } = await import("@/bucket/s3-storage");
-          const stored = await documentStorage.uploadDocument({
+          const { documentStorage } = await import("@/bucket");
+          const document = await documentStorage.uploadDocument({
             file,
             uploadedBy: session.user.id,
           });
 
-          const isAdmin = (session.user as any).role === "admin";
-          const status = isAdmin ? "approved" : "pending";
-
-          const { db } = await import("@/db/index");
-          const { document: documentTable } = await import("@/db/schema");
-
-          const [doc] = await db
-            .insert(documentTable)
-            .values({
-              key: stored.key,
-              name: stored.name,
-              contentType: stored.contentType,
-              size: stored.size,
-              status,
-              uploadedBy: session.user.id,
-            })
-            .returning();
-
-          if (!doc) {
-            throw new Error("Document record was not created.");
-          }
-
-          return json({
-            document: {
-              ...stored,
-              status: doc.status,
-            },
-          }, 201);
+          return json({ document }, 201);
         } catch (error) {
           return json({ error: getErrorMessage(error) }, 400);
         }
