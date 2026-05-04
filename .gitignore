@@ -7,7 +7,6 @@ dist
 *.tgz
 .output
 .vercel
-.tanstack
 
 # code coverage
 coverage
@@ -35,3 +34,5 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Finder (MacOS) folder config
 .DS_Store
+
+.tanstack/

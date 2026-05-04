@@ -11,11 +11,11 @@ export function BrandMark({ className }: BrandMarkProps) {
     <Link
       to="/"
       className={cn(
-        "inline-flex items-center gap-2 font-heading text-xl font-black tracking-tight text-white hover:opacity-90 transition-opacity",
+        "inline-flex items-center gap-2.5 font-heading text-lg font-bold tracking-tight text-foreground transition-opacity hover:opacity-80",
         className,
       )}
     >
-      <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-[0.7rem] font-black text-primary-foreground">
+      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-[0.65rem] font-black text-primary-foreground">
         M
       </span>
       Memoir
