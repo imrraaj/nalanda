@@ -26,6 +26,7 @@ export type StoredDocument = {
 
 export type UploadDocumentInput = {
   file: File;
+  nameOverride?: string;
   uploadedBy: string;
 };
 
@@ -153,10 +154,14 @@ class S3Storage {
     });
   }
 
-  async uploadDocument({ file, uploadedBy }: UploadDocumentInput): Promise<StoredDocument> {
+  async uploadDocument({
+    file,
+    nameOverride,
+    uploadedBy,
+  }: UploadDocumentInput): Promise<StoredDocument> {
     this.validateFile(file);
 
-    const safeName = sanitizeFileName(file.name || "document");
+    const safeName = sanitizeFileName(nameOverride || file.name || "document");
     const key = this.buildObjectKey(uploadedBy, safeName);
     const body = new Uint8Array(await file.arrayBuffer());
     const uploadedAt = new Date().toISOString();

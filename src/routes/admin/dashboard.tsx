@@ -1,21 +1,42 @@
 import {
-  IconBook2,
-  IconFileDescription,
-  IconFileTypeJpg,
-  IconFileTypePng,
-  IconFolder,
+  IconArrowsMove,
+  IconDotsVertical,
+  IconEdit,
+  IconEye,
+  IconFolderOpen,
+  IconFolderPlus,
+  IconInfoCircle,
   IconPlus,
+  IconTrash,
   IconUpload,
 } from "@tabler/icons-react";
 import { createFileRoute, redirect, useNavigate, useRouter } from "@tanstack/react-router";
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 
 import { BrandMark } from "@/components/brand-mark";
+import { LibraryInfoPanel } from "@/components/library/library-info-panel";
+import { LibraryItemTile } from "@/components/library/library-item-tile";
 import { LibraryTree } from "@/components/library/library-tree";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogDismiss,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { signOut } from "@/lib/auth.actions";
@@ -23,12 +44,10 @@ import {
   getLibraryBreadcrumbs,
   getLibraryChildren,
   getLibraryFolderOptions,
-  isFileItem,
-  isFolderItem,
   isPdfItem,
   type LibraryItemSummary,
 } from "@/lib/library";
-import { formatBytes, formatDateTime, getInitials } from "@/lib/utils";
+import { getInitials } from "@/lib/utils";
 
 type AdminUser = {
   banned: boolean | null;
@@ -36,6 +55,17 @@ type AdminUser = {
   id: string;
   name: string;
   role: string;
+};
+
+type AdminTab = "library" | "users";
+
+type AdminDialogState =
+  | { mode: "create-folder" }
+  | { itemId: string; mode: "delete" | "download" | "info" | "move" | "rename" }
+  | null;
+
+type FileInputWithRelativePath = File & {
+  webkitRelativePath?: string;
 };
 
 export const Route = createFileRoute("/admin/dashboard")({
@@ -71,39 +101,39 @@ export const Route = createFileRoute("/admin/dashboard")({
   component: AdminDashboardPage,
 });
 
-function getFileIcon(item: Pick<LibraryItemSummary, "kind">) {
-  switch (item.kind) {
-    case "jpeg":
-      return <IconFileTypeJpg className="size-4 text-primary" />;
-    case "png":
-      return <IconFileTypePng className="size-4 text-primary" />;
-    case "epub":
-      return <IconBook2 className="size-4 text-primary" />;
-    default:
-      return <IconFileDescription className="size-4 text-primary" />;
-  }
-}
-
 function AdminDashboardPage() {
   const navigate = useNavigate();
   const router = useRouter();
   const { items, users, viewer } = Route.useLoaderData();
-  const [tab, setTab] = useState<"library" | "users">("library");
+  const [tab, setTab] = useState<AdminTab>("library");
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(() => new Set());
-  const [newFolderName, setNewFolderName] = useState("");
-  const [renameItemId, setRenameItemId] = useState<string | null>(null);
-  const [renameName, setRenameName] = useState("");
-  const [moveItemId, setMoveItemId] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<AdminDialogState>(null);
+  const [draftName, setDraftName] = useState("");
   const [moveParentId, setMoveParentId] = useState("__root__");
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const folderInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (folderInputRef.current) {
+      (folderInputRef.current as unknown as {
+        setAttribute: (name: string, value: string) => void;
+      }).setAttribute("webkitdirectory", "");
+      (folderInputRef.current as unknown as {
+        setAttribute: (name: string, value: string) => void;
+      }).setAttribute("directory", "");
+    }
+  }, []);
 
   useEffect(() => {
     if (selectedFolderId && !items.some((item) => item.id === selectedFolderId && item.kind === "folder")) {
       setSelectedFolderId(null);
+    }
+
+    if (dialog && "itemId" in dialog && !items.some((item) => item.id === dialog.itemId)) {
+      setDialog(null);
     }
 
     const breadcrumbIds = getLibraryBreadcrumbs(items, selectedFolderId).map((item) => item.id);
@@ -121,19 +151,28 @@ function AdminDashboardPage() {
 
       return next;
     });
-  }, [items, selectedFolderId]);
+  }, [dialog, items, selectedFolderId]);
 
   const breadcrumbs = useMemo(
     () => getLibraryBreadcrumbs(items, selectedFolderId),
     [items, selectedFolderId],
   );
-  const currentChildren = useMemo(
+  const currentItems = useMemo(
     () => getLibraryChildren(items, selectedFolderId),
     [items, selectedFolderId],
   );
-  const folders = currentChildren.filter(isFolderItem);
-  const files = currentChildren.filter(isFileItem);
-  const currentFolderLabel = breadcrumbs.at(-1)?.name ?? "Library";
+  const dialogItem = useMemo(
+    () => (dialog && "itemId" in dialog ? items.find((item) => item.id === dialog.itemId) ?? null : null),
+    [dialog, items],
+  );
+  const currentFolderName = breadcrumbs.at(-1)?.name ?? "Library";
+  const moveOptions = useMemo(
+    () => getLibraryFolderOptions(items, dialogItem?.kind === "folder" ? dialogItem.id : null),
+    [dialogItem, items],
+  );
+  const downloadHref = dialogItem
+    ? `/api/documents/content?itemId=${encodeURIComponent(dialogItem.id)}&download=1`
+    : "#";
 
   function toggleFolder(folderId: string) {
     setExpandedFolderIds((current) => {
@@ -152,6 +191,7 @@ function AdminDashboardPage() {
   function openFolder(folderId: string) {
     setSelectedFolderId(folderId);
     setExpandedFolderIds((current) => new Set(current).add(folderId));
+    setDialog(null);
   }
 
   async function invalidateData() {
@@ -173,9 +213,9 @@ function AdminDashboardPage() {
 
     try {
       const response = await fetch("/api/admin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
       });
 
       if (!response.ok) {
@@ -188,25 +228,8 @@ function AdminDashboardPage() {
     }
   }
 
-  async function handleCreateFolder(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    try {
-      await postAdmin({
-        action: "create-folder",
-        name: newFolderName,
-        parentId: selectedFolderId,
-      });
-      setNewFolderName("");
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Folder could not be created.");
-    }
-  }
-
-  async function handleUpload(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!uploadFile) {
+  async function uploadFiles(files: File[], includeRelativePaths: boolean) {
+    if (files.length === 0) {
       return;
     }
 
@@ -215,25 +238,38 @@ function AdminDashboardPage() {
 
     try {
       const formData = new FormData();
-      formData.append("file", uploadFile);
+
+      for (const file of files) {
+        formData.append("files", file);
+        formData.append(
+          "paths",
+          includeRelativePaths
+            ? (file as FileInputWithRelativePath).webkitRelativePath || file.name
+            : file.name,
+        );
+      }
 
       if (selectedFolderId) {
         formData.append("parentId", selectedFolderId);
       }
 
       const response = await fetch("/api/admin/upload", {
-        method: "POST",
         body: formData,
+        method: "POST",
       });
 
       if (!response.ok) {
         throw new Error(await parseError(response));
       }
 
-      setUploadFile(null);
       if (fileInputRef.current) {
         (fileInputRef.current as unknown as { value: string }).value = "";
       }
+
+      if (folderInputRef.current) {
+        (folderInputRef.current as unknown as { value: string }).value = "";
+      }
+
       await invalidateData();
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Upload failed.");
@@ -242,65 +278,111 @@ function AdminDashboardPage() {
     }
   }
 
-  async function handleRenameSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function openItem(item: LibraryItemSummary) {
+    if (item.kind === "folder") {
+      openFolder(item.id);
+      return;
+    }
+
+    if (isPdfItem(item)) {
+      void navigate({
+        search: { itemId: item.id, name: item.name },
+        to: "/reader",
+      });
+      return;
+    }
+
+    setDialog({ itemId: item.id, mode: "download" });
+  }
+
+  function openCreateFolderDialog() {
+    setDraftName("");
+    setDialog({ mode: "create-folder" });
+  }
+
+  function openRenameDialog(item: LibraryItemSummary) {
+    setDraftName(item.name);
+    setDialog({ itemId: item.id, mode: "rename" });
+  }
+
+  function openMoveDialog(item: LibraryItemSummary) {
+    setMoveParentId(item.parentId ?? "__root__");
+    setDialog({ itemId: item.id, mode: "move" });
+  }
+
+  function handleSignOut() {
+    signOut().then(() => {
+      startTransition(() => {
+        void navigate({ to: "/" });
+      });
+    });
+  }
+
+  async function handleCreateFolder(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!renameItemId) {
+    try {
+      await postAdmin({
+        action: "create-folder",
+        name: draftName,
+        parentId: selectedFolderId,
+      });
+      setDraftName("");
+      setDialog(null);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Folder could not be created.");
+    }
+  }
+
+  async function handleRename(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!dialogItem) {
       return;
     }
 
     try {
       await postAdmin({
         action: "rename-item",
-        id: renameItemId,
-        name: renameName,
+        id: dialogItem.id,
+        name: draftName,
       });
-      setRenameItemId(null);
-      setRenameName("");
+      setDialog(null);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Rename failed.");
     }
   }
 
-  async function handleMoveSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleMove(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!moveItemId) {
+    if (!dialogItem) {
       return;
     }
 
     try {
       await postAdmin({
         action: "move-item",
-        id: moveItemId,
+        id: dialogItem.id,
         parentId: moveParentId === "__root__" ? null : moveParentId,
       });
-      setMoveItemId(null);
-      setMoveParentId("__root__");
+      setDialog(null);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Move failed.");
     }
   }
 
-  async function handleDeleteItem(item: LibraryItemSummary) {
-    const confirmFn = Reflect.get(globalThis, "confirm") as
-      | ((message?: string) => boolean)
-      | undefined;
-    const confirmed = confirmFn?.(
-      item.kind === "folder"
-        ? `Delete "${item.name}" and everything inside it?`
-        : `Delete "${item.name}"?`,
-    ) ?? true;
-
-    if (!confirmed) {
+  async function handleDelete() {
+    if (!dialogItem) {
       return;
     }
 
     try {
       await postAdmin({
         action: "delete-item",
-        id: item.id,
+        id: dialogItem.id,
       });
+      setDialog(null);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Delete failed.");
     }
@@ -317,14 +399,6 @@ function AdminDashboardPage() {
     }
   }
 
-  function handleSignOut() {
-    signOut().then(() => {
-      startTransition(() => {
-        void navigate({ to: "/" });
-      });
-    });
-  }
-
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur">
@@ -332,10 +406,66 @@ function AdminDashboardPage() {
           <div className="flex items-center gap-3">
             <BrandMark />
             <Separator orientation="vertical" className="h-5!" />
-            <span className="text-sm text-muted-foreground">Admin</span>
+            <nav className="flex items-center gap-1">
+              <button
+                className={buttonVariants({ size: "sm", variant: tab === "library" ? "secondary" : "ghost" })}
+                onClick={() => setTab("library")}
+                type="button"
+              >
+                Library
+              </button>
+              <button
+                className={buttonVariants({ size: "sm", variant: tab === "users" ? "secondary" : "ghost" })}
+                onClick={() => setTab("users")}
+                type="button"
+              >
+                Students
+              </button>
+            </nav>
           </div>
+
           <div className="flex items-center gap-3">
-            <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+            {tab === "library" ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className={buttonVariants({ size: "sm", variant: "default" })}
+                  type="button"
+                >
+                  <IconPlus className="size-4" />
+                  Create
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      const inputRef = fileInputRef.current as unknown as
+                        | { click: () => void }
+                        | null;
+                      inputRef?.click();
+                    }}
+                  >
+                    <IconUpload className="size-4" />
+                    Upload file
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      const inputRef = folderInputRef.current as unknown as
+                        | { click: () => void }
+                        | null;
+                      inputRef?.click();
+                    }}
+                  >
+                    <IconUpload className="size-4" />
+                    Upload folder
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={openCreateFolderDialog}>
+                    <IconFolderPlus className="size-4" />
+                    Create folder
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
+
+            <div className="flex size-8 items-center justify-center rounded-[4px] bg-primary/10 text-xs font-semibold text-primary">
               {getInitials(viewer.name)}
             </div>
             <Button onClick={handleSignOut} size="sm" variant="ghost">
@@ -345,51 +475,55 @@ function AdminDashboardPage() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-6 lg:flex-row">
-        <aside className="w-full shrink-0 lg:w-80">
-          <Card className="sticky top-20 p-3">
-            <LibraryTree
-              expandedFolderIds={expandedFolderIds}
-              items={items}
-              onSelectFolder={setSelectedFolderId}
-              onToggleFolder={toggleFolder}
-              selectedFolderId={selectedFolderId}
-            />
-          </Card>
-        </aside>
+      <input
+        accept=".pdf,.jpeg,.jpg,.png,.epub"
+        className="hidden"
+        multiple
+        onChange={(event) => {
+          const target = event.currentTarget as unknown as {
+            files?: ArrayLike<File> | null;
+          };
+          const nextFiles = Array.from(target.files ?? []);
+          void uploadFiles(nextFiles, false);
+        }}
+        ref={fileInputRef}
+        type="file"
+      />
+      <input
+        accept=".pdf,.jpeg,.jpg,.png,.epub"
+        className="hidden"
+        multiple
+        onChange={(event) => {
+          const target = event.currentTarget as unknown as {
+            files?: ArrayLike<File> | null;
+          };
+          const nextFiles = Array.from(target.files ?? []);
+          void uploadFiles(nextFiles, true);
+        }}
+        ref={folderInputRef}
+        type="file"
+      />
+
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-6 xl:flex-row">
+        {tab === "library" ? (
+          <aside className="w-full shrink-0 xl:w-72">
+            <Card className="sticky top-20 p-3">
+              <LibraryTree
+                expandedFolderIds={expandedFolderIds}
+                items={items}
+                onSelectFolder={setSelectedFolderId}
+                onToggleFolder={toggleFolder}
+                selectedFolderId={selectedFolderId}
+              />
+            </Card>
+          </aside>
+        ) : null}
 
         <section className="min-w-0 flex-1 space-y-6">
           <Card className="p-5">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => setTab("library")}
-                    size="sm"
-                    variant={tab === "library" ? "default" : "outline"}
-                  >
-                    Library
-                  </Button>
-                  <Button
-                    onClick={() => setTab("users")}
-                    size="sm"
-                    variant={tab === "users" ? "default" : "outline"}
-                  >
-                    Students
-                  </Button>
-                </div>
-                <h1 className="mt-3 text-2xl font-semibold tracking-tight">
-                  {tab === "library" ? currentFolderLabel : "Student access"}
-                </h1>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {tab === "library"
-                    ? "Create folders, upload files, and manage the exam library tree."
-                    : "Approve or ban student accounts."}
-                </p>
-              </div>
-
-              {tab === "library" ? (
-                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+            {tab === "library" ? (
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <button className="hover:text-foreground" onClick={() => setSelectedFolderId(null)} type="button">
                     Library
                   </button>
@@ -406,8 +540,26 @@ function AdminDashboardPage() {
                     </div>
                   ))}
                 </div>
-              ) : null}
-            </div>
+                <div className="flex items-end justify-between gap-3">
+                  <div>
+                    <h1 className="text-2xl font-semibold tracking-tight">{currentFolderName}</h1>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Double-click folders to open them. Double-click PDFs to open the reader.
+                    </p>
+                  </div>
+                  <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                    {currentItems.length} items
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <h1 className="text-2xl font-semibold tracking-tight">Students</h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Approve or block student access from the main menu actions.
+                </p>
+              </div>
+            )}
           </Card>
 
           {errorMessage ? (
@@ -417,334 +569,58 @@ function AdminDashboardPage() {
           ) : null}
 
           {tab === "library" ? (
-            <div className="space-y-6">
-              <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                <Card className="p-4">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-medium">
-                    <IconPlus className="size-4 text-primary" />
-                    New folder
-                  </div>
-                  <form className="flex flex-col gap-3 sm:flex-row" onSubmit={handleCreateFolder}>
-                    <Input
-                      onChange={(event) => {
-                        const target = event.currentTarget as unknown as { value: string };
-                        setNewFolderName(target.value);
-                      }}
-                      placeholder={`Create inside ${currentFolderLabel}`}
-                      value={newFolderName}
-                    />
-                    <Button disabled={isBusy || !newFolderName.trim()} type="submit">
-                      Create
-                    </Button>
-                  </form>
-                </Card>
-
-                <Card className="p-4">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-medium">
-                    <IconUpload className="size-4 text-primary" />
-                    Upload file
-                  </div>
-                  <form className="flex flex-col gap-3 sm:flex-row" onSubmit={handleUpload}>
-                    <Input
-                      accept=".pdf,.jpeg,.jpg,.png,.epub"
-                      onChange={(event) => {
-                        const target = event.currentTarget as unknown as {
-                          files?: ArrayLike<File> | null;
-                        };
-                        const nextFile = target.files?.[0] ?? null;
-                        setUploadFile(nextFile);
-                      }}
-                      ref={fileInputRef}
-                      type="file"
-                    />
-                    <Button disabled={isBusy || !uploadFile} type="submit">
-                      Upload
-                    </Button>
-                  </form>
-                </Card>
-              </div>
-
-              <section className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                    Folders
-                  </h2>
-                  <Badge variant="secondary">{folders.length}</Badge>
-                </div>
-                {folders.length === 0 ? (
-                  <Card className="border-dashed p-8 text-center text-sm text-muted-foreground">
-                    No folders in this location.
-                  </Card>
-                ) : (
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    {folders.map((folder) => (
-                      <Card key={folder.id} className="space-y-4 p-4">
-                        <button
-                          className="flex w-full items-start gap-3 text-left"
-                          onClick={() => openFolder(folder.id)}
+            currentItems.length === 0 ? (
+              <Card className="border-dashed p-10 text-center text-sm text-muted-foreground">
+                No files or folders in this location.
+              </Card>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                {currentItems.map((item) => (
+                  <LibraryItemTile
+                    key={item.id}
+                    item={item}
+                    onDoubleClick={() => openItem(item)}
+                    menu={(
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          className={buttonVariants({ size: "icon-xs", variant: "ghost" })}
                           type="button"
                         >
-                          <div className="rounded-sm bg-primary/10 p-2 text-primary">
-                            <IconFolder className="size-5" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium">{folder.name}</p>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              Updated {formatDateTime(folder.updatedAt)}
-                            </p>
-                          </div>
-                        </button>
-
-                        <div className="flex flex-wrap gap-2">
-                          <Button onClick={() => openFolder(folder.id)} size="xs" variant="outline">
-                            Open
-                          </Button>
-                          <Button
-                            onClick={() => {
-                              setRenameItemId(folder.id);
-                              setRenameName(folder.name);
-                              setMoveItemId(null);
-                            }}
-                            size="xs"
-                            variant="outline"
-                          >
-                            Rename
-                          </Button>
-                          <Button
-                            onClick={() => {
-                              setMoveItemId(folder.id);
-                              setMoveParentId(folder.parentId ?? "__root__");
-                              setRenameItemId(null);
-                            }}
-                            size="xs"
-                            variant="outline"
-                          >
-                            Move
-                          </Button>
-                          <Button onClick={() => handleDeleteItem(folder)} size="xs" variant="ghost">
-                            Delete
-                          </Button>
-                        </div>
-
-                        {renameItemId === folder.id ? (
-                          <form className="space-y-2" onSubmit={handleRenameSubmit}>
-                            <Input
-                              onChange={(event) => {
-                                const target = event.currentTarget as unknown as {
-                                  value: string;
-                                };
-                                setRenameName(target.value);
-                              }}
-                              value={renameName}
-                            />
-                            <div className="flex gap-2">
-                              <Button disabled={isBusy || !renameName.trim()} size="xs" type="submit">
-                                Save
-                              </Button>
-                              <Button
-                                onClick={() => {
-                                  setRenameItemId(null);
-                                  setRenameName("");
-                                }}
-                                size="xs"
-                                type="button"
-                                variant="ghost"
-                              >
-                                Cancel
-                              </Button>
-                            </div>
-                          </form>
-                        ) : null}
-
-                        {moveItemId === folder.id ? (
-                          <form className="space-y-2" onSubmit={handleMoveSubmit}>
-                            <select
-                              className="h-9 w-full rounded-sm border border-border bg-background px-3 text-sm"
-                              onChange={(event) => {
-                                const target = event.currentTarget as unknown as {
-                                  value: string;
-                                };
-                                setMoveParentId(target.value);
-                              }}
-                              value={moveParentId}
-                            >
-                              <option value="__root__">Root</option>
-                              {getLibraryFolderOptions(items, folder.id).map((option) => (
-                                <option key={option.id} value={option.id}>
-                                  {option.name}
-                                </option>
-                              ))}
-                            </select>
-                            <div className="flex gap-2">
-                              <Button disabled={isBusy} size="xs" type="submit">
-                                Move
-                              </Button>
-                              <Button
-                                onClick={() => {
-                                  setMoveItemId(null);
-                                  setMoveParentId("__root__");
-                                }}
-                                size="xs"
-                                type="button"
-                                variant="ghost"
-                              >
-                                Cancel
-                              </Button>
-                            </div>
-                          </form>
-                        ) : null}
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </section>
-
-              <section className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                    Files
-                  </h2>
-                  <Badge variant="secondary">{files.length}</Badge>
-                </div>
-
-                {files.length === 0 ? (
-                  <Card className="border-dashed p-8 text-center text-sm text-muted-foreground">
-                    No files in this location.
-                  </Card>
-                ) : (
-                  <div className="space-y-3">
-                    {files.map((item) => (
-                      <Card key={item.id} className="space-y-4 p-4">
-                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              {getFileIcon(item)}
-                              <p className="truncate text-sm font-medium">{item.name}</p>
-                            </div>
-                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                              <span>{formatBytes(item.size ?? 0)}</span>
-                              <span>•</span>
-                              <span>{formatDateTime(item.updatedAt)}</span>
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {isPdfItem(item) ? (
-                              <a
-                                className="inline-flex h-6 items-center justify-center rounded-sm border border-transparent bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/80"
-                                href={`/reader?itemId=${encodeURIComponent(item.id)}&name=${encodeURIComponent(item.name)}`}
-                              >
-                                Open
-                              </a>
+                          <IconDotsVertical className="size-4" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem onClick={() => openItem(item)}>
+                            {item.kind === "folder" ? (
+                              <IconFolderOpen className="size-4" />
                             ) : (
-                              <a
-                                className="inline-flex h-6 items-center justify-center rounded-sm border border-transparent bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/80"
-                                download={item.name}
-                                href={`/api/documents/content?itemId=${encodeURIComponent(item.id)}&download=1`}
-                              >
-                                Download
-                              </a>
+                              <IconEye className="size-4" />
                             )}
-                            <Button
-                              onClick={() => {
-                                setRenameItemId(item.id);
-                                setRenameName(item.name);
-                                setMoveItemId(null);
-                              }}
-                              size="xs"
-                              variant="outline"
-                            >
-                              Rename
-                            </Button>
-                            <Button
-                              onClick={() => {
-                                setMoveItemId(item.id);
-                                setMoveParentId(item.parentId ?? "__root__");
-                                setRenameItemId(null);
-                              }}
-                              size="xs"
-                              variant="outline"
-                            >
-                              Move
-                            </Button>
-                            <Button onClick={() => handleDeleteItem(item)} size="xs" variant="ghost">
-                              Delete
-                            </Button>
-                          </div>
-                        </div>
-
-                        {renameItemId === item.id ? (
-                          <form className="space-y-2" onSubmit={handleRenameSubmit}>
-                            <Input
-                              onChange={(event) => {
-                                const target = event.currentTarget as unknown as {
-                                  value: string;
-                                };
-                                setRenameName(target.value);
-                              }}
-                              value={renameName}
-                            />
-                            <div className="flex gap-2">
-                              <Button disabled={isBusy || !renameName.trim()} size="xs" type="submit">
-                                Save
-                              </Button>
-                              <Button
-                                onClick={() => {
-                                  setRenameItemId(null);
-                                  setRenameName("");
-                                }}
-                                size="xs"
-                                type="button"
-                                variant="ghost"
-                              >
-                                Cancel
-                              </Button>
-                            </div>
-                          </form>
-                        ) : null}
-
-                        {moveItemId === item.id ? (
-                          <form className="space-y-2" onSubmit={handleMoveSubmit}>
-                            <select
-                              className="h-9 w-full rounded-sm border border-border bg-background px-3 text-sm"
-                              onChange={(event) => {
-                                const target = event.currentTarget as unknown as {
-                                  value: string;
-                                };
-                                setMoveParentId(target.value);
-                              }}
-                              value={moveParentId}
-                            >
-                              <option value="__root__">Root</option>
-                              {getLibraryFolderOptions(items).map((option) => (
-                                <option key={option.id} value={option.id}>
-                                  {option.name}
-                                </option>
-                              ))}
-                            </select>
-                            <div className="flex gap-2">
-                              <Button disabled={isBusy} size="xs" type="submit">
-                                Move
-                              </Button>
-                              <Button
-                                onClick={() => {
-                                  setMoveItemId(null);
-                                  setMoveParentId("__root__");
-                                }}
-                                size="xs"
-                                type="button"
-                                variant="ghost"
-                              >
-                                Cancel
-                              </Button>
-                            </div>
-                          </form>
-                        ) : null}
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </section>
-            </div>
+                            {item.kind === "folder" ? "Open" : isPdfItem(item) ? "Open" : "Download"}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openRenameDialog(item)}>
+                            <IconEdit className="size-4" />
+                            Rename
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openMoveDialog(item)}>
+                            <IconArrowsMove className="size-4" />
+                            Move
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setDialog({ itemId: item.id, mode: "info" })}>
+                            <IconInfoCircle className="size-4" />
+                            Info
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => setDialog({ itemId: item.id, mode: "delete" })}>
+                            <IconTrash className="size-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  />
+                ))}
+              </div>
+            )
           ) : (
             <Card className="p-0">
               <div className="divide-y divide-border/50">
@@ -765,14 +641,14 @@ function AdminDashboardPage() {
                           {!user.banned ? (
                             <>
                               <Badge variant="secondary">Active</Badge>
-                              <Button onClick={() => handleUserAction("ban-user", user.id)} size="sm" variant="outline">
+                              <Button onClick={() => void handleUserAction("ban-user", user.id)} size="sm" variant="outline">
                                 Ban
                               </Button>
                             </>
                           ) : (
                             <>
                               <Badge variant="destructive">Banned</Badge>
-                              <Button onClick={() => handleUserAction("approve-user", user.id)} size="sm">
+                              <Button onClick={() => void handleUserAction("approve-user", user.id)} size="sm">
                                 Unban
                               </Button>
                             </>
@@ -786,6 +662,153 @@ function AdminDashboardPage() {
           )}
         </section>
       </main>
+
+      <Dialog
+        onOpenChange={(open) => {
+          if (!open) {
+            setDialog(null);
+          }
+        }}
+        open={dialog !== null}
+      >
+        {dialog?.mode === "create-folder" ? (
+          <DialogContent>
+            <DialogIconClose />
+            <DialogHeader>
+              <DialogTitle>Create folder</DialogTitle>
+              <DialogDescription>
+                Create a new folder inside {currentFolderName}.
+              </DialogDescription>
+            </DialogHeader>
+            <form className="mt-4" onSubmit={handleCreateFolder}>
+              <Input
+                onChange={(event) => {
+                  const target = event.currentTarget as unknown as { value: string };
+                  setDraftName(target.value);
+                }}
+                placeholder="Folder name"
+                value={draftName}
+              />
+              <DialogFooter>
+                <DialogDismiss>Cancel</DialogDismiss>
+                <Button disabled={isBusy || !draftName.trim()} type="submit">
+                  Create
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        ) : null}
+
+        {dialog?.mode === "rename" && dialogItem ? (
+          <DialogContent>
+            <DialogIconClose />
+            <DialogHeader>
+              <DialogTitle>Rename</DialogTitle>
+              <DialogDescription>
+                Rename {dialogItem.name}.
+              </DialogDescription>
+            </DialogHeader>
+            <form className="mt-4" onSubmit={handleRename}>
+              <Input
+                onChange={(event) => {
+                  const target = event.currentTarget as unknown as { value: string };
+                  setDraftName(target.value);
+                }}
+                value={draftName}
+              />
+              <DialogFooter>
+                <DialogDismiss>Cancel</DialogDismiss>
+                <Button disabled={isBusy || !draftName.trim()} type="submit">
+                  Save
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        ) : null}
+
+        {dialog?.mode === "move" && dialogItem ? (
+          <DialogContent>
+            <DialogIconClose />
+            <DialogHeader>
+              <DialogTitle>Move</DialogTitle>
+              <DialogDescription>
+                Move {dialogItem.name} to another folder.
+              </DialogDescription>
+            </DialogHeader>
+            <form className="mt-4" onSubmit={handleMove}>
+              <select
+                className="h-9 w-full rounded-[4px] border border-border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+                onChange={(event) => {
+                  const target = event.currentTarget as unknown as { value: string };
+                  setMoveParentId(target.value);
+                }}
+                value={moveParentId}
+              >
+                <option value="__root__">Root</option>
+                {moveOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
+              <DialogFooter>
+                <DialogDismiss>Cancel</DialogDismiss>
+                <Button disabled={isBusy} type="submit">
+                  Move
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        ) : null}
+
+        {dialog?.mode === "delete" && dialogItem ? (
+          <DialogContent>
+            <DialogIconClose />
+            <DialogHeader>
+              <DialogTitle>Delete</DialogTitle>
+              <DialogDescription>
+                {dialogItem.kind === "folder"
+                  ? `Delete ${dialogItem.name} and everything inside it.`
+                  : `Delete ${dialogItem.name}.`}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <DialogDismiss>Cancel</DialogDismiss>
+              <Button disabled={isBusy} onClick={() => void handleDelete()} type="button" variant="destructive">
+                Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        ) : null}
+
+        {dialog?.mode === "info" && dialogItem ? (
+          <DialogContent className="max-w-xl">
+            <LibraryInfoPanel item={dialogItem} items={items} onClose={() => setDialog(null)} />
+          </DialogContent>
+        ) : null}
+
+        {dialog?.mode === "download" && dialogItem ? (
+          <DialogContent>
+            <DialogIconClose />
+            <DialogHeader>
+              <DialogTitle>Download file</DialogTitle>
+              <DialogDescription>
+                {dialogItem.name} is not opened in the built-in reader. Download it to view it.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <DialogDismiss>Cancel</DialogDismiss>
+              <a
+                className={buttonVariants({ size: "sm" })}
+                download={dialogItem.name}
+                href={downloadHref}
+              >
+                Download
+              </a>
+            </DialogFooter>
+          </DialogContent>
+        ) : null}
+      </Dialog>
     </div>
   );
 }

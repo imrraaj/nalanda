@@ -26,20 +26,45 @@ export const Route = createFileRoute("/api/admin/upload")({
           typeof parentIdValue === "string" && parentIdValue.trim().length > 0
             ? parentIdValue.trim()
             : null;
+        const files = formData.getAll("files").reduce<File[]>((accumulator, value) => {
+          if (
+            typeof value === "object" &&
+            value !== null &&
+            "name" in value &&
+            typeof value.name === "string"
+          ) {
+            accumulator.push(value as unknown as File);
+          }
 
-        if (!(file instanceof File)) {
+          return accumulator;
+        }, []);
+        const pathValues = formData.getAll("paths");
+        const uploadFiles =
+          files.length > 0
+            ? files
+            : file instanceof File
+              ? [file]
+              : [];
+
+        if (uploadFiles.length === 0) {
           return json({ error: "A file is required." }, 400);
         }
 
         try {
-          const { uploadLibraryFile } = await import("@/lib/library.server");
-          const item = await uploadLibraryFile({
-            file,
+          const { uploadLibraryEntries } = await import("@/lib/library.server");
+          const items = await uploadLibraryEntries({
+            entries: uploadFiles.map((entry, index) => ({
+              file: entry,
+              relativePath:
+                typeof pathValues[index] === "string"
+                  ? String(pathValues[index])
+                  : entry.name,
+            })),
             parentId,
             uploadedBy: session.user.id,
           });
 
-          return json({ item }, 201);
+          return json({ item: items[0] ?? null, items }, 201);
         } catch (error) {
           return json({ error: getErrorMessage(error) }, 400);
         }

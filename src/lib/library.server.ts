@@ -83,6 +83,29 @@ async function ensureParentFolder(parentId: string | null) {
   return parent;
 }
 
+async function findSiblingFolderByName(input: {
+  name: string;
+  parentId: string | null;
+}) {
+  const conditions = [
+    eq(libraryItem.kind, "folder"),
+    eq(libraryItem.name, input.name),
+  ];
+
+  if (input.parentId) {
+    conditions.push(eq(libraryItem.parentId, input.parentId));
+  } else {
+    conditions.push(isNull(libraryItem.parentId));
+  }
+
+  const [folder] = await db
+    .select()
+    .from(libraryItem)
+    .where(and(...conditions));
+
+  return folder ?? null;
+}
+
 async function ensureSiblingNameAvailable(options: {
   excludeId?: string;
   name: string;
@@ -277,10 +300,11 @@ export async function deleteLibraryItemTree(input: { itemId: string }) {
 
 export async function uploadLibraryFile(input: {
   file: File;
+  name?: string;
   parentId: string | null;
   uploadedBy: string;
 }) {
-  const name = ensureLibraryName(input.file.name);
+  const name = ensureLibraryName(input.name ?? input.file.name);
   const kind = getLibraryFileKind({
     contentType: input.file.type,
     name,
@@ -295,6 +319,7 @@ export async function uploadLibraryFile(input: {
 
   const stored = await documentStorage.uploadDocument({
     file: input.file,
+    nameOverride: name,
     uploadedBy: input.uploadedBy,
   });
 
@@ -323,6 +348,84 @@ export async function uploadLibraryFile(input: {
     await documentStorage.deleteDocument(stored.key);
     throw error;
   }
+}
+
+async function ensureLibraryFolderPath(input: {
+  createdBy: string;
+  parentId: string | null;
+  segments: string[];
+}) {
+  let currentParentId = input.parentId;
+  const cache = new Map<string, string>();
+
+  for (const rawSegment of input.segments) {
+    const name = ensureLibraryName(rawSegment);
+    const cacheKey = `${currentParentId ?? "__root__"}:${name}`;
+    const cached = cache.get(cacheKey);
+
+    if (cached) {
+      currentParentId = cached;
+      continue;
+    }
+
+    const existing = await findSiblingFolderByName({
+      name,
+      parentId: currentParentId,
+    });
+
+    if (existing) {
+      cache.set(cacheKey, existing.id);
+      currentParentId = existing.id;
+      continue;
+    }
+
+    const created = await createLibraryFolder({
+      createdBy: input.createdBy,
+      name,
+      parentId: currentParentId,
+    });
+
+    cache.set(cacheKey, created.id);
+    currentParentId = created.id;
+  }
+
+  return currentParentId;
+}
+
+export async function uploadLibraryEntries(input: {
+  entries: Array<{
+    file: File;
+    relativePath?: string | null;
+  }>;
+  parentId: string | null;
+  uploadedBy: string;
+}) {
+  const uploadedItems: LibraryItemSummary[] = [];
+
+  for (const entry of input.entries) {
+    const relativePath = entry.relativePath?.trim().replace(/\\/g, "/") ?? "";
+    const pathParts = relativePath
+      ? relativePath.split("/").filter(Boolean)
+      : [entry.file.name];
+    const fileName = pathParts.at(-1) ?? entry.file.name;
+    const folderSegments = pathParts.slice(0, -1);
+    const targetParentId = await ensureLibraryFolderPath({
+      createdBy: input.uploadedBy,
+      parentId: input.parentId,
+      segments: folderSegments,
+    });
+
+    const item = await uploadLibraryFile({
+      file: entry.file,
+      name: fileName,
+      parentId: targetParentId,
+      uploadedBy: input.uploadedBy,
+    });
+
+    uploadedItems.push(item);
+  }
+
+  return uploadedItems;
 }
 
 export async function getReadableLibraryItemForSession(input: {
