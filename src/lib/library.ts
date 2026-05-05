@@ -18,6 +18,12 @@ export type LibraryItemSummary = {
   updatedAt: string;
 };
 
+export type LibrarySearchResult = {
+  item: LibraryItemSummary;
+  path: string;
+  score: number;
+};
+
 const contentTypeKindMap: Record<string, LibraryFileKind> = {
   "application/epub+zip": "epub",
   "application/pdf": "pdf",
@@ -80,6 +86,10 @@ export function normalizeLibraryItemName(name: string) {
   return name.trim().replace(/\s+/g, " ");
 }
 
+function normalizeLibrarySearchText(text: string) {
+  return normalizeLibraryItemName(text).toLowerCase();
+}
+
 export function sortLibraryItems<T extends Pick<LibraryItemSummary, "kind" | "name">>(
   items: readonly T[],
 ) {
@@ -133,6 +143,102 @@ export function getLibraryBreadcrumbs(
   }
 
   return breadcrumbs;
+}
+
+export function getLibraryItemPathParts(
+  items: readonly LibraryItemSummary[],
+  itemId: string,
+) {
+  const index = buildLibraryItemIndex(items);
+  const parts: string[] = [];
+  let current = index.get(itemId) ?? null;
+
+  while (current) {
+    parts.unshift(current.name);
+
+    if (!current.parentId) {
+      break;
+    }
+
+    const parent = index.get(current.parentId);
+
+    if (!parent || parent.kind !== "folder") {
+      break;
+    }
+
+    current = parent;
+  }
+
+  return parts;
+}
+
+export function getLibraryItemPath(
+  items: readonly LibraryItemSummary[],
+  itemId: string,
+) {
+  return getLibraryItemPathParts(items, itemId).join(" / ");
+}
+
+export function searchLibraryItems(
+  items: readonly LibraryItemSummary[],
+  query: string,
+) {
+  const normalizedQuery = normalizeLibrarySearchText(query);
+
+  if (!normalizedQuery) {
+    return [] as LibrarySearchResult[];
+  }
+
+  const results = items.flatMap((item) => {
+    const path = getLibraryItemPath(items, item.id);
+    const normalizedName = normalizeLibrarySearchText(item.name);
+    const normalizedPath = normalizeLibrarySearchText(path);
+
+    if (
+      !normalizedName.includes(normalizedQuery) &&
+      !normalizedPath.includes(normalizedQuery)
+    ) {
+      return [];
+    }
+
+    let score = 3;
+
+    if (normalizedName === normalizedQuery) {
+      score = 0;
+    } else if (normalizedName.startsWith(normalizedQuery)) {
+      score = 1;
+    } else if (normalizedName.includes(normalizedQuery)) {
+      score = 2;
+    }
+
+    return [{
+      item,
+      path,
+      score,
+    }] satisfies LibrarySearchResult[];
+  });
+
+  return results.sort((left, right) => {
+    if (left.score !== right.score) {
+      return left.score - right.score;
+    }
+
+    if (left.item.kind === "folder" && right.item.kind !== "folder") {
+      return -1;
+    }
+
+    if (left.item.kind !== "folder" && right.item.kind === "folder") {
+      return 1;
+    }
+
+    if (left.path.length !== right.path.length) {
+      return left.path.length - right.path.length;
+    }
+
+    return left.item.name.localeCompare(right.item.name, undefined, {
+      sensitivity: "base",
+    });
+  });
 }
 
 export function getLibraryDescendantIds(

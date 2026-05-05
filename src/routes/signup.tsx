@@ -1,4 +1,4 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { AuthShell } from "@/components/auth/auth-shell";
@@ -9,6 +9,17 @@ import { signUpWithEmail } from "@/lib/auth.actions";
 import { deriveNameFromEmail } from "@/lib/utils";
 
 export const Route = createFileRoute("/signup")({
+  beforeLoad: async () => {
+    const { getSession } = await import("@/lib/auth.function");
+    const session = await getSession();
+
+    if (session) {
+      throw redirect({
+        search: { folderId: "", openId: "", q: "" },
+        to: "/dashboard",
+      });
+    }
+  },
   component: SignUpPage,
 });
 

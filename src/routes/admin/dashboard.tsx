@@ -7,11 +7,12 @@ import {
   IconFolderPlus,
   IconInfoCircle,
   IconPlus,
+  IconSearch,
   IconTrash,
   IconUpload,
 } from "@tabler/icons-react";
 import { createFileRoute, redirect, useNavigate, useRouter } from "@tanstack/react-router";
-import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 import { BrandMark } from "@/components/brand-mark";
 import { LibraryInfoPanel } from "@/components/library/library-info-panel";
@@ -45,6 +46,7 @@ import {
   getLibraryChildren,
   getLibraryFolderOptions,
   isPdfItem,
+  searchLibraryItems,
   type LibraryItemSummary,
 } from "@/lib/library";
 import { getInitials } from "@/lib/utils";
@@ -61,7 +63,7 @@ type AdminTab = "library" | "users";
 
 type AdminDialogState =
   | { mode: "create-folder" }
-  | { itemId: string; mode: "delete" | "download" | "info" | "move" | "rename" }
+  | { itemId: string; mode: "delete" | "info" | "move" | "rename" }
   | null;
 
 type FileInputWithRelativePath = File & {
@@ -69,11 +71,18 @@ type FileInputWithRelativePath = File & {
 };
 
 export const Route = createFileRoute("/admin/dashboard")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    folderId: typeof search.folderId === "string" ? search.folderId : "",
+    openId: typeof search.openId === "string" ? search.openId : "",
+    q: typeof search.q === "string" ? search.q : "",
+  }),
   beforeLoad: async () => {
     const { getSession } = await import("@/lib/auth.function");
     const session = await getSession();
     if (!session) throw redirect({ to: "/login" });
-    if ((session.user as { role?: string }).role !== "admin") throw redirect({ to: "/dashboard" });
+    if ((session.user as { role?: string }).role !== "admin") {
+      throw redirect({ search: { folderId: "", openId: "", q: "" }, to: "/dashboard" });
+    }
   },
   loader: async () => {
     const [{ getSession }, { loadAdminDashboardData }] = await Promise.all([
@@ -87,7 +96,7 @@ export const Route = createFileRoute("/admin/dashboard")({
     }
 
     if ((session.user as { role?: string }).role !== "admin") {
-      throw redirect({ to: "/dashboard" });
+      throw redirect({ search: { folderId: "", openId: "", q: "" }, to: "/dashboard" });
     }
 
     return {
@@ -104,9 +113,9 @@ export const Route = createFileRoute("/admin/dashboard")({
 function AdminDashboardPage() {
   const navigate = useNavigate();
   const router = useRouter();
+  const { folderId, openId, q } = Route.useSearch();
   const { items, users, viewer } = Route.useLoaderData();
   const [tab, setTab] = useState<AdminTab>("library");
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(() => new Set());
   const [dialog, setDialog] = useState<AdminDialogState>(null);
   const [draftName, setDraftName] = useState("");
@@ -115,6 +124,21 @@ function AdminDashboardPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
+  const [searchInput, setSearchInput] = useState(q);
+  const searchQuery = searchInput.trim();
+  const deferredQuery = useDeferredValue(searchQuery);
+  const selectedFolderId = folderId || null;
+  const dialogItem = useMemo(
+    () => (dialog && "itemId" in dialog ? items.find((item) => item.id === dialog.itemId) ?? null : null),
+    [dialog, items],
+  );
+  const downloadItem = useMemo(() => {
+    if (!openId) {
+      return null;
+    }
+
+    return items.find((item) => item.id === openId) ?? null;
+  }, [items, openId]);
 
   useEffect(() => {
     if (folderInputRef.current) {
@@ -129,11 +153,46 @@ function AdminDashboardPage() {
 
   useEffect(() => {
     if (selectedFolderId && !items.some((item) => item.id === selectedFolderId && item.kind === "folder")) {
-      setSelectedFolderId(null);
+      void navigate({
+        replace: true,
+        search: {
+          folderId: "",
+          openId: openId || "",
+          q: q || "",
+        },
+        to: "/admin/dashboard",
+      });
+      return;
     }
 
     if (dialog && "itemId" in dialog && !items.some((item) => item.id === dialog.itemId)) {
       setDialog(null);
+    }
+
+    if (downloadItem?.kind === "folder") {
+      void navigate({
+        replace: true,
+        search: {
+          folderId: downloadItem.id,
+          openId: "",
+          q: "",
+        },
+        to: "/admin/dashboard",
+      });
+      return;
+    }
+
+    if (openId && !downloadItem) {
+      void navigate({
+        replace: true,
+        search: {
+          folderId: selectedFolderId || "",
+          openId: "",
+          q: q || "",
+        },
+        to: "/admin/dashboard",
+      });
+      return;
     }
 
     const breadcrumbIds = getLibraryBreadcrumbs(items, selectedFolderId).map((item) => item.id);
@@ -151,7 +210,16 @@ function AdminDashboardPage() {
 
       return next;
     });
-  }, [dialog, items, selectedFolderId]);
+  }, [dialog, downloadItem, items, navigate, openId, q, selectedFolderId]);
+
+  useEffect(() => {
+    if (downloadItem && isPdfItem(downloadItem)) {
+      void navigate({
+        search: { itemId: downloadItem.id, name: downloadItem.name },
+        to: "/reader",
+      });
+    }
+  }, [downloadItem, navigate]);
 
   const breadcrumbs = useMemo(
     () => getLibraryBreadcrumbs(items, selectedFolderId),
@@ -161,18 +229,64 @@ function AdminDashboardPage() {
     () => getLibraryChildren(items, selectedFolderId),
     [items, selectedFolderId],
   );
-  const dialogItem = useMemo(
-    () => (dialog && "itemId" in dialog ? items.find((item) => item.id === dialog.itemId) ?? null : null),
-    [dialog, items],
+  const searchResults = useMemo(
+    () => searchLibraryItems(items, deferredQuery),
+    [deferredQuery, items],
+  );
+  const searchResultById = useMemo(
+    () => new Map(searchResults.map((result) => [result.item.id, result] as const)),
+    [searchResults],
   );
   const currentFolderName = breadcrumbs.at(-1)?.name ?? "Library";
+  const visibleItems = deferredQuery ? searchResults.map((result) => result.item) : currentItems;
   const moveOptions = useMemo(
     () => getLibraryFolderOptions(items, dialogItem?.kind === "folder" ? dialogItem.id : null),
     [dialogItem, items],
   );
-  const downloadHref = dialogItem
-    ? `/api/documents/content?itemId=${encodeURIComponent(dialogItem.id)}&download=1`
+  const downloadHref = downloadItem
+    ? `/api/documents/content?itemId=${encodeURIComponent(downloadItem.id)}&download=1`
     : "#";
+
+  useEffect(() => {
+    setSearchInput(q);
+  }, [q]);
+
+  useEffect(() => {
+    if (searchInput === q) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      void navigate({
+        replace: true,
+        search: {
+          folderId: selectedFolderId || "",
+          openId: "",
+          q: searchInput,
+        },
+        to: "/admin/dashboard",
+      });
+    }, 250);
+
+    return () => clearTimeout(timeoutId);
+  }, [navigate, q, searchInput, selectedFolderId]);
+
+  function updateRouteState(next: {
+    folderId?: string | null;
+    openId?: string | null;
+    q?: string;
+    replace?: boolean;
+  }) {
+    void navigate({
+      replace: next.replace ?? false,
+      search: {
+        folderId: next.folderId || "",
+        openId: next.openId || "",
+        q: next.q || "",
+      },
+      to: "/admin/dashboard",
+    });
+  }
 
   function toggleFolder(folderId: string) {
     setExpandedFolderIds((current) => {
@@ -188,9 +302,17 @@ function AdminDashboardPage() {
     });
   }
 
-  function openFolder(folderId: string) {
-    setSelectedFolderId(folderId);
-    setExpandedFolderIds((current) => new Set(current).add(folderId));
+  function openFolder(folderIdToOpen: string | null, options?: { clearQuery?: boolean }) {
+    updateRouteState({
+      folderId: folderIdToOpen,
+      openId: null,
+      q: options?.clearQuery === false ? q : "",
+    });
+
+    if (folderIdToOpen) {
+      setExpandedFolderIds((current) => new Set(current).add(folderIdToOpen));
+    }
+
     setDialog(null);
   }
 
@@ -292,7 +414,11 @@ function AdminDashboardPage() {
       return;
     }
 
-    setDialog({ itemId: item.id, mode: "download" });
+    updateRouteState({
+      folderId: item.parentId,
+      openId: item.id,
+      q: "",
+    });
   }
 
   function openCreateFolderDialog() {
@@ -465,7 +591,7 @@ function AdminDashboardPage() {
               </DropdownMenu>
             ) : null}
 
-            <div className="flex size-8 items-center justify-center rounded-[4px] bg-primary/10 text-xs font-semibold text-primary">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-xs font-semibold text-primary">
               {getInitials(viewer.name)}
             </div>
             <Button onClick={handleSignOut} size="sm" variant="ghost">
@@ -511,7 +637,7 @@ function AdminDashboardPage() {
               <LibraryTree
                 expandedFolderIds={expandedFolderIds}
                 items={items}
-                onSelectFolder={setSelectedFolderId}
+                onSelectFolder={(nextFolderId) => openFolder(nextFolderId)}
                 onToggleFolder={toggleFolder}
                 selectedFolderId={selectedFolderId}
               />
@@ -523,8 +649,20 @@ function AdminDashboardPage() {
           <Card className="p-5">
             {tab === "library" ? (
               <div className="space-y-4">
+                <div className="relative max-w-xl">
+                  <IconSearch className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    className="pl-9"
+                    onChange={(event) => {
+                      const target = event.currentTarget as unknown as { value: string };
+                      setSearchInput(target.value);
+                    }}
+                    placeholder="Search by file, folder, or path"
+                    value={searchInput}
+                  />
+                </div>
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <button className="hover:text-foreground" onClick={() => setSelectedFolderId(null)} type="button">
+                  <button className="hover:text-foreground" onClick={() => openFolder(null)} type="button">
                     Library
                   </button>
                   {breadcrumbs.map((crumb) => (
@@ -532,7 +670,7 @@ function AdminDashboardPage() {
                       <span>/</span>
                       <button
                         className="hover:text-foreground"
-                        onClick={() => setSelectedFolderId(crumb.id)}
+                        onClick={() => openFolder(crumb.id)}
                         type="button"
                       >
                         {crumb.name}
@@ -542,13 +680,17 @@ function AdminDashboardPage() {
                 </div>
                 <div className="flex items-end justify-between gap-3">
                   <div>
-                    <h1 className="text-2xl font-semibold tracking-tight">{currentFolderName}</h1>
+                    <h1 className="text-2xl font-semibold tracking-tight">
+                      {deferredQuery ? `Search: ${deferredQuery}` : currentFolderName}
+                    </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Double-click folders to open them. Double-click PDFs to open the reader.
+                      {deferredQuery
+                        ? "Matches are checked against item names and full library paths."
+                        : "Double-click folders to open them. Double-click PDFs to open the reader."}
                     </p>
                   </div>
                   <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                    {currentItems.length} items
+                    {visibleItems.length} items
                   </span>
                 </div>
               </div>
@@ -569,56 +711,61 @@ function AdminDashboardPage() {
           ) : null}
 
           {tab === "library" ? (
-            currentItems.length === 0 ? (
+            visibleItems.length === 0 ? (
               <Card className="border-dashed p-10 text-center text-sm text-muted-foreground">
-                No files or folders in this location.
+                {deferredQuery ? "No files or folders match your search." : "No files or folders in this location."}
               </Card>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-                {currentItems.map((item) => (
-                  <LibraryItemTile
-                    key={item.id}
-                    item={item}
-                    onDoubleClick={() => openItem(item)}
-                    menu={(
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          className={buttonVariants({ size: "icon-xs", variant: "ghost" })}
-                          type="button"
-                        >
-                          <IconDotsVertical className="size-4" />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          <DropdownMenuItem onClick={() => openItem(item)}>
-                            {item.kind === "folder" ? (
-                              <IconFolderOpen className="size-4" />
-                            ) : (
-                              <IconEye className="size-4" />
-                            )}
-                            {item.kind === "folder" ? "Open" : isPdfItem(item) ? "Open" : "Download"}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openRenameDialog(item)}>
-                            <IconEdit className="size-4" />
-                            Rename
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openMoveDialog(item)}>
-                            <IconArrowsMove className="size-4" />
-                            Move
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setDialog({ itemId: item.id, mode: "info" })}>
-                            <IconInfoCircle className="size-4" />
-                            Info
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => setDialog({ itemId: item.id, mode: "delete" })}>
-                            <IconTrash className="size-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  />
-                ))}
+                {visibleItems.map((item) => {
+                  const result = deferredQuery ? searchResultById.get(item.id) ?? null : null;
+
+                  return (
+                    <LibraryItemTile
+                      key={item.id}
+                      detailText={result?.path}
+                      item={item}
+                      onDoubleClick={() => openItem(item)}
+                      menu={(
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            className={buttonVariants({ size: "icon-xs", variant: "ghost" })}
+                            type="button"
+                          >
+                            <IconDotsVertical className="size-4" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuItem onClick={() => openItem(item)}>
+                              {item.kind === "folder" ? (
+                                <IconFolderOpen className="size-4" />
+                              ) : (
+                                <IconEye className="size-4" />
+                              )}
+                              {item.kind === "folder" ? "Open" : isPdfItem(item) ? "Open" : "Download"}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openRenameDialog(item)}>
+                              <IconEdit className="size-4" />
+                              Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openMoveDialog(item)}>
+                              <IconArrowsMove className="size-4" />
+                              Move
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setDialog({ itemId: item.id, mode: "info" })}>
+                              <IconInfoCircle className="size-4" />
+                              Info
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => setDialog({ itemId: item.id, mode: "delete" })}>
+                              <IconTrash className="size-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    />
+                  );
+                })}
               </div>
             )
           ) : (
@@ -666,14 +813,22 @@ function AdminDashboardPage() {
       <Dialog
         onOpenChange={(open) => {
           if (!open) {
-            setDialog(null);
+            if (dialog) {
+              setDialog(null);
+            } else {
+              updateRouteState({
+                folderId: selectedFolderId,
+                openId: null,
+                q,
+                replace: true,
+              });
+            }
           }
         }}
-        open={dialog !== null}
+        open={dialog !== null || !!downloadItem}
       >
         {dialog?.mode === "create-folder" ? (
           <DialogContent>
-            <DialogIconClose />
             <DialogHeader>
               <DialogTitle>Create folder</DialogTitle>
               <DialogDescription>
@@ -701,7 +856,6 @@ function AdminDashboardPage() {
 
         {dialog?.mode === "rename" && dialogItem ? (
           <DialogContent>
-            <DialogIconClose />
             <DialogHeader>
               <DialogTitle>Rename</DialogTitle>
               <DialogDescription>
@@ -728,7 +882,6 @@ function AdminDashboardPage() {
 
         {dialog?.mode === "move" && dialogItem ? (
           <DialogContent>
-            <DialogIconClose />
             <DialogHeader>
               <DialogTitle>Move</DialogTitle>
               <DialogDescription>
@@ -737,7 +890,7 @@ function AdminDashboardPage() {
             </DialogHeader>
             <form className="mt-4" onSubmit={handleMove}>
               <select
-                className="h-9 w-full rounded-[4px] border border-border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+                className="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
                 onChange={(event) => {
                   const target = event.currentTarget as unknown as { value: string };
                   setMoveParentId(target.value);
@@ -763,7 +916,6 @@ function AdminDashboardPage() {
 
         {dialog?.mode === "delete" && dialogItem ? (
           <DialogContent>
-            <DialogIconClose />
             <DialogHeader>
               <DialogTitle>Delete</DialogTitle>
               <DialogDescription>
@@ -787,20 +939,30 @@ function AdminDashboardPage() {
           </DialogContent>
         ) : null}
 
-        {dialog?.mode === "download" && dialogItem ? (
+        {downloadItem && !isPdfItem(downloadItem) ? (
           <DialogContent>
-            <DialogIconClose />
             <DialogHeader>
               <DialogTitle>Download file</DialogTitle>
               <DialogDescription>
-                {dialogItem.name} is not opened in the built-in reader. Download it to view it.
+                {downloadItem.name} is not opened in the built-in reader. Download it to view it.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <DialogDismiss>Cancel</DialogDismiss>
+              <DialogDismiss
+                onClick={() => {
+                  updateRouteState({
+                    folderId: selectedFolderId,
+                    openId: null,
+                    q,
+                    replace: true,
+                  });
+                }}
+              >
+                Cancel
+              </DialogDismiss>
               <a
                 className={buttonVariants({ size: "sm" })}
-                download={dialogItem.name}
+                download={downloadItem.name}
                 href={downloadHref}
               >
                 Download

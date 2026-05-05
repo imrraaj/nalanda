@@ -1,4 +1,4 @@
-import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { startTransition, useState } from "react";
 
 import { AuthShell } from "@/components/auth/auth-shell";
@@ -8,6 +8,17 @@ import { Input } from "@/components/ui/input";
 import { signInWithEmail } from "@/lib/auth.actions";
 
 export const Route = createFileRoute("/login")({
+  beforeLoad: async () => {
+    const { getSession } = await import("@/lib/auth.function");
+    const session = await getSession();
+
+    if (session) {
+      throw redirect({
+        search: { folderId: "", openId: "", q: "" },
+        to: "/dashboard",
+      });
+    }
+  },
   component: LoginPage,
 });
 
@@ -36,7 +47,10 @@ function LoginPage() {
       }
 
       startTransition(() => {
-        void navigate({ to: "/dashboard" });
+        void navigate({
+          search: { folderId: "", openId: "", q: "" },
+          to: "/dashboard",
+        });
       });
     } catch {
       setErrorMessage("Sign in failed. Try again shortly.");

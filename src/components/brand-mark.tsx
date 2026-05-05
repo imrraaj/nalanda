@@ -15,7 +15,7 @@ export function BrandMark({ className }: BrandMarkProps) {
         className,
       )}
     >
-      <span className="flex h-7 w-7 items-center justify-center rounded-[4px] bg-primary text-[0.65rem] font-black text-primary-foreground">
+      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-[0.65rem] font-black text-primary-foreground">
         M
       </span>
       Memoir

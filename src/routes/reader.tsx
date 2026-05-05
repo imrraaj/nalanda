@@ -1,4 +1,5 @@
 import "pdfjs-dist/web/pdf_viewer.css";
+import pdfWorkerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
 import {
   IconArrowLeft,
@@ -27,8 +28,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-
-const pdfWorkerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
 
 const zoomOptions = [
   { label: "Automatic Zoom", value: "auto" },

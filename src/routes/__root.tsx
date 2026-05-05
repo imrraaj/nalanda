@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import {
+  Link,
   Outlet,
   createRootRoute,
   HeadContent,
@@ -30,6 +31,7 @@ export const Route = createRootRoute({
     links: [{ rel: "stylesheet", href: appCss }],
   }),
   component: RootComponent,
+  notFoundComponent: NotFoundPage,
 });
 
 function RootComponent() {
@@ -53,6 +55,37 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
         <Scripts />
       </body>
     </html>
+  );
+}
+
+function NotFoundPage() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          404
+        </p>
+        <h1 className="font-heading text-3xl">Page not found</h1>
+        <p className="max-w-md text-sm text-muted-foreground">
+          The page you requested does not exist or the link is no longer valid.
+        </p>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          className="rounded-[4px] border border-border bg-card px-4 py-2 text-sm text-foreground transition-colors hover:bg-accent"
+          onClick={() => window.history.back()}
+          type="button"
+        >
+          Go back
+        </button>
+        <Link
+          className="rounded-[4px] bg-primary px-4 py-2 text-sm text-primary-foreground transition-opacity hover:opacity-90"
+          to="/"
+        >
+          Go home
+        </Link>
+      </div>
+    </div>
   );
 }
 

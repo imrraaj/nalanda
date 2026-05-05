@@ -12,8 +12,10 @@ import { Card } from "@/components/ui/card";
 import { getLibraryItemKindLabel, type LibraryItemSummary } from "@/lib/library";
 
 type LibraryItemTileProps = {
+  detailText?: string;
   item: LibraryItemSummary;
   menu?: ReactNode;
+  metaText?: string;
   onDoubleClick?: () => void;
 };
 
@@ -33,8 +35,10 @@ function getTileIcon(item: Pick<LibraryItemSummary, "kind">) {
 }
 
 export function LibraryItemTile({
+  detailText,
   item,
   menu,
+  metaText,
   onDoubleClick,
 }: LibraryItemTileProps) {
   return (
@@ -50,8 +54,13 @@ export function LibraryItemTile({
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{item.name}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {getLibraryItemKindLabel(item.kind)}
+            {metaText ?? getLibraryItemKindLabel(item.kind)}
           </p>
+          {detailText ? (
+            <p className="mt-1 truncate text-xs text-muted-foreground/80" title={detailText}>
+              {detailText}
+            </p>
+          ) : null}
         </div>
         {menu ? (
           <div
