@@ -75,6 +75,18 @@ function inferContentTypeFromName(name: string) {
     return "application/pdf";
   }
 
+  if (normalizedName.endsWith(".jpeg") || normalizedName.endsWith(".jpg")) {
+    return "image/jpeg";
+  }
+
+  if (normalizedName.endsWith(".png")) {
+    return "image/png";
+  }
+
+  if (normalizedName.endsWith(".epub")) {
+    return "application/epub+zip";
+  }
+
   return "application/octet-stream";
 }
 
@@ -394,6 +406,32 @@ class S3Storage {
       const megabytes = Math.round(config.maxUploadBytes / (1024 * 1024));
       throw new Error(`Document exceeds the ${megabytes}MB upload limit.`);
     }
+
+    const supportedTypes = new Set([
+      "application/epub+zip",
+      "application/pdf",
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+    ]);
+    const normalizedName = file.name.toLowerCase();
+    const hasSupportedExtension = [
+      ".epub",
+      ".jpeg",
+      ".jpg",
+      ".pdf",
+      ".png",
+    ].some((extension) => normalizedName.endsWith(extension));
+
+    if (file.type && supportedTypes.has(file.type.toLowerCase())) {
+      return;
+    }
+
+    if (hasSupportedExtension) {
+      return;
+    }
+
+    throw new Error("Only PDF, JPEG, PNG, and EPUB files are supported.");
   }
 
   private assertManagedKey(key: string) {

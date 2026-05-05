@@ -14,6 +14,12 @@ function toInlineDisposition(name: string) {
   return `inline; filename="${safeName}"`;
 }
 
+function toAttachmentDisposition(name: string) {
+  const safeName = name.replace(/["\r\n]/g, "");
+
+  return `attachment; filename="${safeName}"`;
+}
+
 export const Route = createFileRoute("/api/documents/content")({
   server: {
     handlers: {
@@ -26,19 +32,45 @@ export const Route = createFileRoute("/api/documents/content")({
         }
 
         const url = new URL(request.url);
+        const itemId = url.searchParams.get("itemId")?.trim();
         const key = url.searchParams.get("key")?.trim();
+        const forceDownload = url.searchParams.get("download") === "1";
 
-        if (!key) {
-          return json({ error: "A document key is required." }, 400);
+        if (!itemId && !key) {
+          return json({ error: "A document id is required." }, 400);
         }
 
         try {
+          let objectKey = key ?? "";
+          let displayName = "Document";
+          let contentType = "application/octet-stream";
+
+          if (itemId) {
+            const { getReadableLibraryItemForSession } = await import("@/lib/library.server");
+            const item = await getReadableLibraryItemForSession({
+              itemId,
+              session: {
+                user: {
+                  id: session.user.id,
+                  role: (session.user as { role?: string | null }).role ?? "user",
+                },
+              },
+            });
+
+            objectKey = item.storageKey ?? "";
+            displayName = item.name;
+            contentType = item.contentType ?? contentType;
+          }
+
           const { documentStorage } = await import("@/bucket/s3-storage");
-          const document = await documentStorage.getDocumentContent(key);
+          const document = await documentStorage.getDocumentContent(objectKey);
+          const resolvedType = document.contentType || contentType;
           const headers = new Headers({
             "Cache-Control": "private, no-store, max-age=0",
-            "Content-Disposition": toInlineDisposition(document.name),
-            "Content-Type": document.contentType,
+            "Content-Disposition": forceDownload || resolvedType !== "application/pdf"
+              ? toAttachmentDisposition(displayName || document.name)
+              : toInlineDisposition(displayName || document.name),
+            "Content-Type": resolvedType,
             "Cross-Origin-Resource-Policy": "same-origin",
             Pragma: "no-cache",
             "X-Content-Type-Options": "nosniff",

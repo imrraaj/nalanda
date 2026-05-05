@@ -8,27 +8,9 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unexpected upload error.";
 }
 
-export const Route = createFileRoute("/api/uploads")({
+export const Route = createFileRoute("/api/admin/upload")({
   server: {
     handlers: {
-      GET: async ({ request }: { request: Request }) => {
-        const { getSessionFromHeaders } = await import("@/lib/auth.server");
-        const session = await getSessionFromHeaders(request.headers);
-
-        if (!session) {
-          return json({ error: "Unauthorized" }, 401);
-        }
-
-        const { listLibraryItemsForSession } = await import("@/lib/library.server");
-        const items = await listLibraryItemsForSession({
-          user: {
-            id: session.user.id,
-            role: (session.user as { role?: string | null }).role ?? "user",
-          },
-        });
-
-        return json({ items });
-      },
       POST: async ({ request }: { request: Request }) => {
         const { getSessionFromHeaders } = await import("@/lib/auth.server");
         const session = await getSessionFromHeaders(request.headers);

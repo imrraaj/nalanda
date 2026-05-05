@@ -1,16 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 
-import { db } from "@/db/index";
-import { document, user } from "@/db/schema";
+import { listAdminUsers, loadAdminLibrarySnapshot } from "@/lib/library.server";
 
 export const loadAdminDashboardData = createServerFn({ method: "GET" }).handler(async () => {
-  const [users, documents] = await Promise.all([
-    db.select().from(user).orderBy(user.createdAt),
-    db.select().from(document).orderBy(document.createdAt),
+  const [users, items] = await Promise.all([
+    listAdminUsers(),
+    loadAdminLibrarySnapshot(),
   ]);
 
   return {
-    documents,
+    items,
     users,
   };
 });

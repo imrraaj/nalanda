@@ -92,7 +92,7 @@ function getFindMessage(state: number, previous: boolean) {
 
 export const Route = createFileRoute("/reader")({
   validateSearch: (search: Record<string, unknown>) => ({
-    key: typeof search.key === "string" ? search.key : "",
+    itemId: typeof search.itemId === "string" ? search.itemId : "",
     name: typeof search.name === "string" ? search.name : "",
   }),
   beforeLoad: async ({ search }) => {
@@ -103,7 +103,7 @@ export const Route = createFileRoute("/reader")({
       throw redirect({ to: "/login" });
     }
 
-    if (!search.key) {
+    if (!search.itemId) {
       throw redirect({ to: "/dashboard" });
     }
   },
@@ -111,7 +111,7 @@ export const Route = createFileRoute("/reader")({
 });
 
 function ReaderPage() {
-  const { key, name } = Route.useSearch();
+  const { itemId, name } = Route.useSearch();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<HTMLDivElement | null>(null);
   const runtimeRef = useRef<ViewerRuntime | null>(null);
@@ -129,7 +129,7 @@ function ReaderPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const deferredFindQuery = useDeferredValue(findQuery);
   const displayName = name || "Protected document";
-  const documentUrl = `/api/documents/content?key=${encodeURIComponent(key)}`;
+  const documentUrl = `/api/documents/content?itemId=${encodeURIComponent(itemId)}`;
 
   useEffect(() => {
     let isDisposed = false;
@@ -552,7 +552,7 @@ function ReaderPage() {
                 <Link
                   aria-label="Reload reader"
                   className={cn(buttonVariants({ size: "icon-sm", variant: "ghost" }))}
-                  search={{ key, name }}
+                  search={{ itemId, name }}
                   title="Reload reader"
                   to="/reader"
                 >
