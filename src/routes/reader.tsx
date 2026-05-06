@@ -104,7 +104,7 @@ export const Route = createFileRoute("/reader")({
     }
 
     if (!search.itemId) {
-      throw redirect({ search: { folderId: "", openId: "", q: "" }, to: "/dashboard" });
+      throw redirect({ to: "/dashboard" });
     }
   },
   component: ReaderPage,
@@ -267,7 +267,7 @@ function ReaderPage() {
           setErrorMessage(
             error instanceof Error
               ? error.message
-              : "Unable to open this PDF in the Nalanda reader.",
+              : "Unable to open this PDF in the Pilot360 LMS reader.",
           );
           setIsLoading(false);
         }
@@ -621,7 +621,7 @@ function ReaderPage() {
               <Alert>
                 <AlertTitle>Loading PDF viewer</AlertTitle>
                 <AlertDescription>
-                  Nalanda is streaming the PDF through the app server and initializing the viewer.
+                  Pilot360 LMS is streaming the PDF through the app server and initializing the viewer.
                 </AlertDescription>
               </Alert>
             </div>

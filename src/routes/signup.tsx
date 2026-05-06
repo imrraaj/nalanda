@@ -13,10 +13,7 @@ export const Route = createFileRoute("/signup")({
     const session = await getSession();
 
     if (session) {
-      throw redirect({
-        search: { folderId: "", openId: "", q: "" },
-        to: "/dashboard",
-      });
+      throw redirect({ to: "/dashboard" });
     }
   },
   component: SignUpPage,
@@ -62,7 +59,7 @@ function SignUpPage() {
         description="Your account is pending admin approval. You'll be able to sign in once approved."
         footer={
           <p>
-            <Link search={{ redirectTo: "" }} to="/login" className="text-primary hover:underline">Back to sign in</Link>
+            <Link to="/login" className="text-primary hover:underline">Back to sign in</Link>
           </p>
         }
       >
@@ -76,11 +73,11 @@ function SignUpPage() {
   return (
     <AuthShell
       title="Create account"
-      description="Create a student account to request access to the Nalanda library."
+      description="Create a student account to request access to the Pilot360 LMS library."
       footer={
         <p>
           Already have an account?{" "}
-          <Link search={{ redirectTo: "" }} to="/login" className="text-primary hover:underline">Sign in</Link>
+          <Link to="/login" className="text-primary hover:underline">Sign in</Link>
         </p>
       }
     >

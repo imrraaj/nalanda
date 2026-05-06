@@ -1,5 +1,7 @@
 import {
   IconArrowsMove,
+  IconChevronLeft,
+  IconChevronRight,
   IconDotsVertical,
   IconEdit,
   IconEye,
@@ -12,16 +14,20 @@ import {
   IconUpload,
 } from "@tabler/icons-react";
 import { createFileRoute, redirect, useNavigate, useRouter } from "@tanstack/react-router";
-import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 import { BrandMark } from "@/components/brand-mark";
 import { LibraryInfoPanel } from "@/components/library/library-info-panel";
 import { LibraryItemTile } from "@/components/library/library-item-tile";
-import { LibraryTree } from "@/components/library/library-tree";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+} from "@/components/ui/context-menu";
 import {
   Dialog,
   DialogContent,
@@ -39,6 +45,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { signOut } from "@/lib/auth.actions";
 import {
@@ -50,6 +57,7 @@ import {
   type LibraryItemSummary,
 } from "@/lib/library";
 import { formatDateTime, getInitials } from "@/lib/utils";
+import { loadAdminUsersPage } from "@/routes/admin/-dashboard.function";
 
 type AdminUser = {
   banReason?: string | null;
@@ -59,6 +67,15 @@ type AdminUser = {
   id: string;
   name: string;
   role: string;
+};
+
+type AdminUsersPage = {
+  page: number;
+  pageSize: number;
+  query: string;
+  totalPages: number;
+  totalUsers: number;
+  users: AdminUser[];
 };
 
 type AdminTab = "library" | "users";
@@ -72,6 +89,20 @@ type FileInputWithRelativePath = File & {
   webkitRelativePath?: string;
 };
 
+type UploadProgressState = {
+  fileCount: number;
+  percent: number;
+};
+
+type ItemAction = {
+  destructive?: boolean;
+  key: string;
+  label: string;
+  onSelect: () => void;
+  renderIcon: () => ReactNode;
+  separatorBefore?: boolean;
+};
+
 function isPendingApprovalUser(user: AdminUser) {
   if (!user.banned) {
     return false;
@@ -81,18 +112,86 @@ function isPendingApprovalUser(user: AdminUser) {
   return reason === "pending admin approval" || reason === "awaiting approval";
 }
 
+function isRejectedUser(user: AdminUser) {
+  if (!user.banned) {
+    return false;
+  }
+
+  return (user.banReason?.toLowerCase().trim() ?? "") === "access request rejected by admin";
+}
+
+function normalizeAdminSearchState(next: {
+  folderId?: string | null;
+  openId?: string | null;
+  q?: string | null;
+  tab?: AdminTab | null;
+  userPage?: number | null;
+  userQ?: string | null;
+}) {
+  const normalizedFolderId = next.folderId?.trim();
+  const normalizedOpenId = next.openId?.trim();
+  const normalizedQuery = next.q?.trim();
+  const normalizedUserQuery = next.userQ?.trim();
+
+  return {
+    folderId: normalizedFolderId || undefined,
+    openId: normalizedOpenId || undefined,
+    q: normalizedQuery || undefined,
+    tab: next.tab && next.tab !== "library" ? next.tab : undefined,
+    userPage:
+      next.userPage && Number.isFinite(next.userPage) && next.userPage > 1
+        ? next.userPage
+        : undefined,
+    userQ: normalizedUserQuery || undefined,
+  };
+}
+
 export const Route = createFileRoute("/admin/dashboard")({
   validateSearch: (search: Record<string, unknown>) => ({
-    folderId: typeof search.folderId === "string" ? search.folderId : "",
-    openId: typeof search.openId === "string" ? search.openId : "",
-    q: typeof search.q === "string" ? search.q : "",
+    folderId:
+      typeof search.folderId === "string" && search.folderId.trim()
+        ? search.folderId
+        : undefined,
+    openId:
+      typeof search.openId === "string" && search.openId.trim()
+        ? search.openId
+        : undefined,
+    q:
+      typeof search.q === "string" && search.q.trim()
+        ? search.q
+        : undefined,
+    tab:
+      search.tab === "users" || search.tab === "library"
+        ? search.tab
+        : undefined,
+    userPage: (() => {
+      const value =
+        typeof search.userPage === "number"
+          ? search.userPage
+          : typeof search.userPage === "string"
+            ? Number.parseInt(search.userPage, 10)
+            : NaN;
+
+      return Number.isFinite(value) && value > 1 ? value : undefined;
+    })(),
+    userQ:
+      typeof search.userQ === "string" && search.userQ.trim()
+        ? search.userQ
+        : undefined,
   }),
   beforeLoad: async () => {
     const { getSession } = await import("@/lib/auth.function");
     const session = await getSession();
-    if (!session) throw redirect({ search: { redirectTo: "" }, to: "/login" });
+
+    if (!session) {
+      throw redirect({
+        search: { redirectTo: "/admin/dashboard" },
+        to: "/login",
+      });
+    }
+
     if ((session.user as { role?: string }).role !== "admin") {
-      throw redirect({ search: { folderId: "", openId: "", q: "" }, to: "/dashboard" });
+      throw redirect({ to: "/dashboard" });
     }
   },
   loader: async () => {
@@ -103,16 +202,18 @@ export const Route = createFileRoute("/admin/dashboard")({
     const [session, data] = await Promise.all([getSession(), loadAdminDashboardData()]);
 
     if (!session) {
-      throw redirect({ search: { redirectTo: "" }, to: "/login" });
+      throw redirect({
+        search: { redirectTo: "/admin/dashboard" },
+        to: "/login",
+      });
     }
 
     if ((session.user as { role?: string }).role !== "admin") {
-      throw redirect({ search: { folderId: "", openId: "", q: "" }, to: "/dashboard" });
+      throw redirect({ to: "/dashboard" });
     }
 
     return {
       items: data.items as LibraryItemSummary[],
-      users: data.users as AdminUser[],
       viewer: {
         name: session.user.name,
       },
@@ -124,21 +225,27 @@ export const Route = createFileRoute("/admin/dashboard")({
 function AdminDashboardPage() {
   const navigate = useNavigate();
   const router = useRouter();
-  const { folderId, openId, q } = Route.useSearch();
-  const { items, users, viewer } = Route.useLoaderData();
-  const [tab, setTab] = useState<AdminTab>("library");
-  const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(() => new Set());
+  const { folderId, openId, q, tab, userPage, userQ } = Route.useSearch();
+  const { items, viewer } = Route.useLoaderData();
+  const activeTab = tab ?? "library";
+  const currentUserPage = userPage ?? 1;
+  const selectedFolderId = folderId ?? null;
   const [dialog, setDialog] = useState<AdminDialogState>(null);
   const [draftName, setDraftName] = useState("");
   const [moveParentId, setMoveParentId] = useState("__root__");
   const [isBusy, setIsBusy] = useState(false);
+  const [isUsersLoading, setIsUsersLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState(q ?? "");
+  const [userSearchInput, setUserSearchInput] = useState(userQ ?? "");
+  const [usersPage, setUsersPage] = useState<AdminUsersPage | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgressState | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
-  const [searchInput, setSearchInput] = useState(q);
   const searchQuery = searchInput.trim();
   const deferredQuery = useDeferredValue(searchQuery);
-  const selectedFolderId = folderId || null;
+  const deferredUserQuery = useDeferredValue(userSearchInput.trim());
+
   const dialogItem = useMemo(
     () => (dialog && "itemId" in dialog ? items.find((item) => item.id === dialog.itemId) ?? null : null),
     [dialog, items],
@@ -153,12 +260,8 @@ function AdminDashboardPage() {
 
   useEffect(() => {
     if (folderInputRef.current) {
-      (folderInputRef.current as unknown as {
-        setAttribute: (name: string, value: string) => void;
-      }).setAttribute("webkitdirectory", "");
-      (folderInputRef.current as unknown as {
-        setAttribute: (name: string, value: string) => void;
-      }).setAttribute("directory", "");
+      folderInputRef.current.setAttribute("webkitdirectory", "");
+      folderInputRef.current.setAttribute("directory", "");
     }
   }, []);
 
@@ -166,11 +269,13 @@ function AdminDashboardPage() {
     if (selectedFolderId && !items.some((item) => item.id === selectedFolderId && item.kind === "folder")) {
       void navigate({
         replace: true,
-        search: {
-          folderId: "",
-          openId: openId || "",
-          q: q || "",
-        },
+        search: normalizeAdminSearchState({
+          openId,
+          q,
+          tab: activeTab,
+          userPage: currentUserPage,
+          userQ,
+        }),
         to: "/admin/dashboard",
       });
       return;
@@ -183,11 +288,12 @@ function AdminDashboardPage() {
     if (downloadItem?.kind === "folder") {
       void navigate({
         replace: true,
-        search: {
+        search: normalizeAdminSearchState({
           folderId: downloadItem.id,
-          openId: "",
-          q: "",
-        },
+          tab: activeTab,
+          userPage: currentUserPage,
+          userQ,
+        }),
         to: "/admin/dashboard",
       });
       return;
@@ -196,32 +302,28 @@ function AdminDashboardPage() {
     if (openId && !downloadItem) {
       void navigate({
         replace: true,
-        search: {
-          folderId: selectedFolderId || "",
-          openId: "",
-          q: q || "",
-        },
+        search: normalizeAdminSearchState({
+          folderId: selectedFolderId,
+          q,
+          tab: activeTab,
+          userPage: currentUserPage,
+          userQ,
+        }),
         to: "/admin/dashboard",
       });
-      return;
     }
-
-    const breadcrumbIds = getLibraryBreadcrumbs(items, selectedFolderId).map((item) => item.id);
-
-    if (breadcrumbIds.length === 0) {
-      return;
-    }
-
-    setExpandedFolderIds((current) => {
-      const next = new Set(current);
-
-      for (const id of breadcrumbIds) {
-        next.add(id);
-      }
-
-      return next;
-    });
-  }, [dialog, downloadItem, items, navigate, openId, q, selectedFolderId]);
+  }, [
+    activeTab,
+    currentUserPage,
+    dialog,
+    downloadItem,
+    items,
+    navigate,
+    openId,
+    q,
+    selectedFolderId,
+    userQ,
+  ]);
 
   useEffect(() => {
     if (downloadItem && isPdfItem(downloadItem)) {
@@ -248,88 +350,158 @@ function AdminDashboardPage() {
     () => new Map(searchResults.map((result) => [result.item.id, result] as const)),
     [searchResults],
   );
-  const currentFolderName = breadcrumbs.at(-1)?.name ?? "Library";
   const visibleItems = deferredQuery ? searchResults.map((result) => result.item) : currentItems;
+  const currentFolderName = breadcrumbs.at(-1)?.name ?? "Pilot360 Library";
   const moveOptions = useMemo(
     () => getLibraryFolderOptions(items, dialogItem?.kind === "folder" ? dialogItem.id : null),
     [dialogItem, items],
   );
-  const studentUsers = useMemo(
-    () =>
-      users
-        .filter((user) => user.role !== "admin")
-        .sort((left, right) => {
-          const leftPending = isPendingApprovalUser(left) ? 0 : 1;
-          const rightPending = isPendingApprovalUser(right) ? 0 : 1;
-
-          if (leftPending !== rightPending) {
-            return leftPending - rightPending;
-          }
-
-          const leftTime = left.createdAt ? new Date(left.createdAt).getTime() : 0;
-          const rightTime = right.createdAt ? new Date(right.createdAt).getTime() : 0;
-
-          return rightTime - leftTime;
-        }),
-    [users],
-  );
+  const studentUsers = useMemo(() => usersPage?.users ?? [], [usersPage]);
   const downloadHref = downloadItem
     ? `/api/documents/content?itemId=${encodeURIComponent(downloadItem.id)}&download=1`
     : "#";
 
   useEffect(() => {
-    setSearchInput(q);
+    setSearchInput(q ?? "");
   }, [q]);
 
   useEffect(() => {
-    if (searchInput === q) {
+    if (searchInput === (q ?? "")) {
       return;
     }
 
     const timeoutId = setTimeout(() => {
       void navigate({
         replace: true,
-        search: {
-          folderId: selectedFolderId || "",
-          openId: "",
+        search: normalizeAdminSearchState({
+          folderId: selectedFolderId,
           q: searchInput,
-        },
+          tab: activeTab,
+          userPage: currentUserPage,
+          userQ,
+        }),
         to: "/admin/dashboard",
       });
     }, 250);
 
     return () => clearTimeout(timeoutId);
-  }, [navigate, q, searchInput, selectedFolderId]);
+  }, [activeTab, currentUserPage, navigate, q, searchInput, selectedFolderId, userQ]);
+
+  useEffect(() => {
+    setUserSearchInput(userQ ?? "");
+  }, [userQ]);
+
+  useEffect(() => {
+    if (userSearchInput === (userQ ?? "")) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      void navigate({
+        replace: true,
+        search: normalizeAdminSearchState({
+          folderId: selectedFolderId,
+          openId,
+          q,
+          tab: "users",
+          userPage: 1,
+          userQ: userSearchInput,
+        }),
+        to: "/admin/dashboard",
+      });
+    }, 250);
+
+    return () => clearTimeout(timeoutId);
+  }, [navigate, openId, q, selectedFolderId, userQ, userSearchInput]);
+
+  useEffect(() => {
+    if (activeTab !== "users") {
+      return;
+    }
+
+    let isCancelled = false;
+    setIsUsersLoading(true);
+    setErrorMessage(null);
+
+    void loadAdminUsersPage({
+      data: {
+        page: currentUserPage,
+        q: userQ ?? "",
+      },
+    })
+      .then((result) => {
+        if (isCancelled) {
+          return;
+        }
+
+        setUsersPage(result as AdminUsersPage);
+
+        if (result.page !== currentUserPage) {
+          void navigate({
+            replace: true,
+            search: normalizeAdminSearchState({
+              folderId: selectedFolderId,
+              openId,
+              q,
+              tab: "users",
+              userPage: result.page,
+              userQ,
+            }),
+            to: "/admin/dashboard",
+          });
+        }
+      })
+      .catch((error) => {
+        if (!isCancelled) {
+          setErrorMessage(error instanceof Error ? error.message : "Unable to load students.");
+        }
+      })
+      .finally(() => {
+        if (!isCancelled) {
+          setIsUsersLoading(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeTab, currentUserPage, navigate, openId, q, selectedFolderId, userQ]);
 
   function updateRouteState(next: {
     folderId?: string | null;
     openId?: string | null;
-    q?: string;
+    q?: string | null;
     replace?: boolean;
+    tab?: AdminTab | null;
+    userPage?: number | null;
+    userQ?: string | null;
   }) {
     void navigate({
       replace: next.replace ?? false,
-      search: {
-        folderId: next.folderId || "",
-        openId: next.openId || "",
-        q: next.q || "",
-      },
+      search: normalizeAdminSearchState({
+        folderId: next.folderId,
+        openId: next.openId,
+        q: next.q,
+        tab: next.tab ?? activeTab,
+        userPage: next.userPage ?? currentUserPage,
+        userQ: next.userQ ?? userQ,
+      }),
       to: "/admin/dashboard",
     });
   }
 
-  function toggleFolder(folderId: string) {
-    setExpandedFolderIds((current) => {
-      const next = new Set(current);
-
-      if (next.has(folderId)) {
-        next.delete(folderId);
-      } else {
-        next.add(folderId);
-      }
-
-      return next;
+  function setActiveTab(nextTab: AdminTab) {
+    updateRouteState({
+      folderId: selectedFolderId,
+      openId: null,
+      q,
+      replace: true,
+      tab: nextTab,
+      userPage: nextTab === "users" ? currentUserPage : 1,
+      userQ: nextTab === "users" ? userQ : userQ,
     });
+    setDialog(null);
+    setErrorMessage(null);
   }
 
   function openFolder(folderIdToOpen: string | null, options?: { clearQuery?: boolean }) {
@@ -337,17 +509,38 @@ function AdminDashboardPage() {
       folderId: folderIdToOpen,
       openId: null,
       q: options?.clearQuery === false ? q : "",
+      tab: "library",
     });
-
-    if (folderIdToOpen) {
-      setExpandedFolderIds((current) => new Set(current).add(folderIdToOpen));
-    }
 
     setDialog(null);
   }
 
   async function invalidateData() {
     await router.invalidate({ sync: true });
+  }
+
+  async function refreshUsers() {
+    if (activeTab !== "users") {
+      return;
+    }
+
+    setIsUsersLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const result = await loadAdminUsersPage({
+        data: {
+          page: currentUserPage,
+          q: userQ ?? "",
+        },
+      });
+
+      setUsersPage(result as AdminUsersPage);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Unable to load students.");
+    } finally {
+      setIsUsersLoading(false);
+    }
   }
 
   async function parseError(response: Response) {
@@ -359,7 +552,10 @@ function AdminDashboardPage() {
     }
   }
 
-  async function postAdmin(body: Record<string, unknown>) {
+  async function postAdmin(
+    body: Record<string, unknown>,
+    options?: { onSuccess?: () => Promise<void> | void },
+  ) {
     setIsBusy(true);
     setErrorMessage(null);
 
@@ -374,7 +570,7 @@ function AdminDashboardPage() {
         throw new Error(await parseError(response));
       }
 
-      await invalidateData();
+      await options?.onSuccess?.();
     } finally {
       setIsBusy(false);
     }
@@ -387,6 +583,7 @@ function AdminDashboardPage() {
 
     setIsBusy(true);
     setErrorMessage(null);
+    setUploadProgress({ fileCount: files.length, percent: 0 });
 
     try {
       const formData = new FormData();
@@ -405,9 +602,31 @@ function AdminDashboardPage() {
         formData.append("parentId", selectedFolderId);
       }
 
-      const response = await fetch("/api/admin/upload", {
-        body: formData,
-        method: "POST",
+      const response = await new Promise<Response>((resolve, reject) => {
+        const request = new XMLHttpRequest();
+
+        request.open("POST", "/api/admin/upload");
+        request.responseType = "text";
+        request.upload.onprogress = (event) => {
+          if (!event.lengthComputable) {
+            return;
+          }
+
+          setUploadProgress({
+            fileCount: files.length,
+            percent: Math.max(1, Math.round((event.loaded / event.total) * 100)),
+          });
+        };
+        request.onerror = () => reject(new Error("Upload failed."));
+        request.onload = () => {
+          resolve(
+            new Response(request.responseText, {
+              status: request.status,
+              statusText: request.statusText,
+            }),
+          );
+        };
+        request.send(formData);
       });
 
       if (!response.ok) {
@@ -415,17 +634,19 @@ function AdminDashboardPage() {
       }
 
       if (fileInputRef.current) {
-        (fileInputRef.current as unknown as { value: string }).value = "";
+        fileInputRef.current.value = "";
       }
 
       if (folderInputRef.current) {
-        (folderInputRef.current as unknown as { value: string }).value = "";
+        folderInputRef.current.value = "";
       }
 
+      setUploadProgress({ fileCount: files.length, percent: 100 });
       await invalidateData();
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Upload failed.");
     } finally {
+      setUploadProgress(null);
       setIsBusy(false);
     }
   }
@@ -448,6 +669,7 @@ function AdminDashboardPage() {
       folderId: item.parentId,
       openId: item.id,
       q: "",
+      tab: "library",
     });
   }
 
@@ -478,11 +700,14 @@ function AdminDashboardPage() {
     event.preventDefault();
 
     try {
-      await postAdmin({
-        action: "create-folder",
-        name: draftName,
-        parentId: selectedFolderId,
-      });
+      await postAdmin(
+        {
+          action: "create-folder",
+          name: draftName,
+          parentId: selectedFolderId,
+        },
+        { onSuccess: invalidateData },
+      );
       setDraftName("");
       setDialog(null);
     } catch (error) {
@@ -498,11 +723,14 @@ function AdminDashboardPage() {
     }
 
     try {
-      await postAdmin({
-        action: "rename-item",
-        id: dialogItem.id,
-        name: draftName,
-      });
+      await postAdmin(
+        {
+          action: "rename-item",
+          id: dialogItem.id,
+          name: draftName,
+        },
+        { onSuccess: invalidateData },
+      );
       setDialog(null);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Rename failed.");
@@ -517,11 +745,14 @@ function AdminDashboardPage() {
     }
 
     try {
-      await postAdmin({
-        action: "move-item",
-        id: dialogItem.id,
-        parentId: moveParentId === "__root__" ? null : moveParentId,
-      });
+      await postAdmin(
+        {
+          action: "move-item",
+          id: dialogItem.id,
+          parentId: moveParentId === "__root__" ? null : moveParentId,
+        },
+        { onSuccess: invalidateData },
+      );
       setDialog(null);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Move failed.");
@@ -534,45 +765,169 @@ function AdminDashboardPage() {
     }
 
     try {
-      await postAdmin({
-        action: "delete-item",
-        id: dialogItem.id,
-      });
+      await postAdmin(
+        {
+          action: "delete-item",
+          id: dialogItem.id,
+        },
+        { onSuccess: invalidateData },
+      );
       setDialog(null);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Delete failed.");
     }
   }
 
-  async function handleUserAction(action: "approve-user" | "ban-user", userId: string) {
+  async function handleUserAction(action: "approve-user" | "ban-user" | "reject-user", userId: string) {
     try {
-      await postAdmin({
-        action,
-        id: userId,
-      });
+      await postAdmin(
+        {
+          action,
+          id: userId,
+        },
+        { onSuccess: refreshUsers },
+      );
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "User update failed.");
     }
   }
 
+  function getItemActions(item: LibraryItemSummary): ItemAction[] {
+    return [
+      {
+        key: "open",
+        label: item.kind === "folder" ? "Open" : isPdfItem(item) ? "Open" : "Download",
+        onSelect: () => openItem(item),
+        renderIcon: () =>
+          item.kind === "folder" ? (
+            <IconFolderOpen className="size-4" />
+          ) : (
+            <IconEye className="size-4" />
+          ),
+      },
+      {
+        key: "rename",
+        label: "Rename",
+        onSelect: () => openRenameDialog(item),
+        renderIcon: () => <IconEdit className="size-4" />,
+      },
+      {
+        key: "move",
+        label: "Move",
+        onSelect: () => openMoveDialog(item),
+        renderIcon: () => <IconArrowsMove className="size-4" />,
+      },
+      {
+        key: "info",
+        label: "Info",
+        onSelect: () => setDialog({ itemId: item.id, mode: "info" }),
+        renderIcon: () => <IconInfoCircle className="size-4" />,
+      },
+      {
+        destructive: true,
+        key: "delete",
+        label: "Delete",
+        onSelect: () => setDialog({ itemId: item.id, mode: "delete" }),
+        renderIcon: () => <IconTrash className="size-4" />,
+        separatorBefore: true,
+      },
+    ];
+  }
+
+  function renderDropdownActions(actions: ItemAction[]) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className={buttonVariants({ size: "icon-xs", variant: "ghost" })}
+          type="button"
+        >
+          <IconDotsVertical className="size-4" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          {actions.map((action) => (
+            <div key={action.key}>
+              {action.separatorBefore ? <DropdownMenuSeparator /> : null}
+              <DropdownMenuItem
+                className={
+                  action.destructive
+                    ? "text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive"
+                    : undefined
+                }
+                onClick={action.onSelect}
+              >
+                {action.renderIcon()}
+                {action.label}
+              </DropdownMenuItem>
+            </div>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
+  function renderContextActions(actions: ItemAction[]) {
+    return (
+      <ContextMenuContent>
+        {actions.map((action) => (
+          <div key={action.key}>
+            {action.separatorBefore ? <ContextMenuSeparator /> : null}
+            <ContextMenuItem
+              className={
+                action.destructive
+                  ? "text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive"
+                  : undefined
+              }
+              onClick={action.onSelect}
+            >
+              {action.renderIcon()}
+              {action.label}
+            </ContextMenuItem>
+          </div>
+        ))}
+      </ContextMenuContent>
+    );
+  }
+
+  function renderUserStatus(user: AdminUser) {
+    if (isPendingApprovalUser(user)) {
+      return <Badge variant="secondary">Pending approval</Badge>;
+    }
+
+    if (isRejectedUser(user)) {
+      return <Badge variant="destructive">Rejected</Badge>;
+    }
+
+    if (user.banned) {
+      return <Badge variant="destructive">Disabled</Badge>;
+    }
+
+    return <Badge variant="secondary">Active</Badge>;
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-border/60 bg-background/92 backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between gap-3 px-4">
           <div className="flex items-center gap-3">
             <BrandMark />
-            <Separator orientation="vertical" className="h-5!" />
+            <Separator className="h-5!" orientation="vertical" />
             <nav className="flex items-center gap-1">
               <button
-                className={buttonVariants({ size: "sm", variant: tab === "library" ? "secondary" : "ghost" })}
-                onClick={() => setTab("library")}
+                className={buttonVariants({
+                  size: "sm",
+                  variant: activeTab === "library" ? "secondary" : "ghost",
+                })}
+                onClick={() => setActiveTab("library")}
                 type="button"
               >
                 Library
               </button>
               <button
-                className={buttonVariants({ size: "sm", variant: tab === "users" ? "secondary" : "ghost" })}
-                onClick={() => setTab("users")}
+                className={buttonVariants({
+                  size: "sm",
+                  variant: activeTab === "users" ? "secondary" : "ghost",
+                })}
+                onClick={() => setActiveTab("users")}
                 type="button"
               >
                 Students
@@ -581,7 +936,7 @@ function AdminDashboardPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            {tab === "library" ? (
+            {activeTab === "library" ? (
               <DropdownMenu>
                 <DropdownMenuTrigger
                   className={buttonVariants({ size: "sm", variant: "default" })}
@@ -593,10 +948,7 @@ function AdminDashboardPage() {
                 <DropdownMenuContent>
                   <DropdownMenuItem
                     onClick={() => {
-                      const inputRef = fileInputRef.current as unknown as
-                        | { click: () => void }
-                        | null;
-                      inputRef?.click();
+                      fileInputRef.current?.click();
                     }}
                   >
                     <IconUpload className="size-4" />
@@ -604,10 +956,7 @@ function AdminDashboardPage() {
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => {
-                      const inputRef = folderInputRef.current as unknown as
-                        | { click: () => void }
-                        | null;
-                      inputRef?.click();
+                      folderInputRef.current?.click();
                     }}
                   >
                     <IconUpload className="size-4" />
@@ -621,7 +970,7 @@ function AdminDashboardPage() {
               </DropdownMenu>
             ) : null}
 
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-xs font-semibold text-primary">
+            <div className="flex size-8 items-center justify-center rounded-[4px] bg-primary/10 text-xs font-semibold text-primary">
               {getInitials(viewer.name)}
             </div>
             <Button onClick={handleSignOut} size="sm" variant="ghost">
@@ -636,10 +985,7 @@ function AdminDashboardPage() {
         className="hidden"
         multiple
         onChange={(event) => {
-          const target = event.currentTarget as unknown as {
-            files?: ArrayLike<File> | null;
-          };
-          const nextFiles = Array.from(target.files ?? []);
+          const nextFiles = Array.from(event.currentTarget.files ?? []);
           void uploadFiles(nextFiles, false);
         }}
         ref={fileInputRef}
@@ -650,213 +996,306 @@ function AdminDashboardPage() {
         className="hidden"
         multiple
         onChange={(event) => {
-          const target = event.currentTarget as unknown as {
-            files?: ArrayLike<File> | null;
-          };
-          const nextFiles = Array.from(target.files ?? []);
+          const nextFiles = Array.from(event.currentTarget.files ?? []);
           void uploadFiles(nextFiles, true);
         }}
         ref={folderInputRef}
         type="file"
       />
 
-      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-6 xl:flex-row">
-        {tab === "library" ? (
-          <aside className="w-full shrink-0 xl:w-72">
-            <Card className="sticky top-20 p-3">
-              <LibraryTree
-                expandedFolderIds={expandedFolderIds}
-                items={items}
-                onSelectFolder={(nextFolderId) => openFolder(nextFolderId)}
-                onToggleFolder={toggleFolder}
-                selectedFolderId={selectedFolderId}
-              />
-            </Card>
-          </aside>
-        ) : null}
-
-        <section className="min-w-0 flex-1 space-y-6">
-          <Card className="p-5">
-            {tab === "library" ? (
-              <div className="space-y-4">
-                <div className="relative max-w-xl">
-                  <IconSearch className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    className="pl-9"
-                    onChange={(event) => {
-                      const target = event.currentTarget as unknown as { value: string };
-                      setSearchInput(target.value);
-                    }}
-                    placeholder="Search by file, folder, or path"
-                    value={searchInput}
-                  />
-                </div>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <button className="hover:text-foreground" onClick={() => openFolder(null)} type="button">
-                    Library
-                  </button>
-                  {breadcrumbs.map((crumb) => (
-                    <div key={crumb.id} className="flex items-center gap-2">
-                      <span>/</span>
-                      <button
-                        className="hover:text-foreground"
-                        onClick={() => openFolder(crumb.id)}
-                        type="button"
-                      >
-                        {crumb.name}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex items-end justify-between gap-3">
-                  <div>
-                    <h1 className="text-2xl font-semibold tracking-tight">
-                      {deferredQuery ? `Search: ${deferredQuery}` : currentFolderName}
-                    </h1>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {deferredQuery
-                        ? "Matches are checked against item names and full library paths."
-                        : "Double-click folders to open them. Double-click PDFs to open the reader."}
-                    </p>
-                  </div>
-                  <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                    {visibleItems.length} items
-                  </span>
-                </div>
+      <main
+        aria-busy={isBusy || isUsersLoading}
+        className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-6"
+      >
+        <Card className="p-5">
+          {activeTab === "library" ? (
+            <div className="space-y-4">
+              <div className="relative max-w-xl">
+                <IconSearch className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="pl-9"
+                  onChange={(event) => setSearchInput(event.currentTarget.value)}
+                  placeholder="Search by file, folder, or path"
+                  value={searchInput}
+                />
               </div>
-            ) : (
+
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <button className="hover:text-foreground" onClick={() => openFolder(null)} type="button">
+                  Library
+                </button>
+                {breadcrumbs.map((crumb) => (
+                  <div key={crumb.id} className="flex items-center gap-2">
+                    <span>/</span>
+                    <button
+                      className="hover:text-foreground"
+                      onClick={() => openFolder(crumb.id)}
+                      type="button"
+                    >
+                      {crumb.name}
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h1 className="text-2xl font-semibold tracking-tight">
+                    {deferredQuery ? `Search: ${deferredQuery}` : currentFolderName}
+                  </h1>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {deferredQuery
+                      ? "Matches are ranked by item name first, then by full library path."
+                      : "Double-click folders to open them. Double-click PDFs to open the reader."}
+                  </p>
+                </div>
+                <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                  {visibleItems.length} items
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <h1 className="text-2xl font-semibold tracking-tight">Students</h1>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Review pending registrations, approve access, or disable existing students.
+                  Review access requests, approve students, reject requests, or disable access.
                 </p>
               </div>
-            )}
-          </Card>
 
-          {errorMessage ? (
-            <Alert variant="destructive">
-              <AlertDescription>{errorMessage}</AlertDescription>
-            </Alert>
-          ) : null}
-
-          {tab === "library" ? (
-            visibleItems.length === 0 ? (
-              <Card className="border-dashed p-10 text-center text-sm text-muted-foreground">
-                {deferredQuery ? "No files or folders match your search." : "No files or folders in this location."}
-              </Card>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-                {visibleItems.map((item) => {
-                  const result = deferredQuery ? searchResultById.get(item.id) ?? null : null;
-
-                  return (
-                    <LibraryItemTile
-                      key={item.id}
-                      detailText={result?.path}
-                      item={item}
-                      onDoubleClick={() => openItem(item)}
-                      menu={(
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            className={buttonVariants({ size: "icon-xs", variant: "ghost" })}
-                            type="button"
-                          >
-                            <IconDotsVertical className="size-4" />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            <DropdownMenuItem onClick={() => openItem(item)}>
-                              {item.kind === "folder" ? (
-                                <IconFolderOpen className="size-4" />
-                              ) : (
-                                <IconEye className="size-4" />
-                              )}
-                              {item.kind === "folder" ? "Open" : isPdfItem(item) ? "Open" : "Download"}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openRenameDialog(item)}>
-                              <IconEdit className="size-4" />
-                              Rename
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openMoveDialog(item)}>
-                              <IconArrowsMove className="size-4" />
-                              Move
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setDialog({ itemId: item.id, mode: "info" })}>
-                              <IconInfoCircle className="size-4" />
-                              Info
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => setDialog({ itemId: item.id, mode: "delete" })}>
-                              <IconTrash className="size-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
-                    />
-                  );
-                })}
+              <div className="w-full max-w-md">
+                <div className="relative">
+                  <IconSearch className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    className="pl-9"
+                    onChange={(event) => setUserSearchInput(event.currentTarget.value)}
+                    placeholder="Search students by name or email"
+                    value={userSearchInput}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {usersPage
+                    ? `${usersPage.totalUsers} students • ${usersPage.pageSize} per page`
+                    : deferredUserQuery
+                      ? "Searching students…"
+                      : "Students are shown 25 per page."}
+                </p>
               </div>
-            )
-          ) : (
-            <Card className="p-0">
-              <div className="divide-y divide-border/50">
-                {studentUsers.length === 0 ? (
-                  <p className="px-6 py-10 text-center text-sm text-muted-foreground">
-                    No students registered yet.
+            </div>
+          )}
+        </Card>
+
+        {uploadProgress ? (
+          <Card className="p-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium">Uploading content</p>
+                  <p className="text-xs text-muted-foreground">
+                    {uploadProgress.fileCount} item{uploadProgress.fileCount === 1 ? "" : "s"} in progress
                   </p>
-                ) : (
-                  studentUsers.map((user) => (
-                    (() => {
-                      const isPending = isPendingApprovalUser(user);
+                </div>
+                <span className="text-sm font-medium tabular-nums">
+                  {uploadProgress.percent}%
+                </span>
+              </div>
+              <Progress value={uploadProgress.percent} />
+            </div>
+          </Card>
+        ) : null}
+
+        {!uploadProgress && isBusy ? (
+          <Alert>
+            <AlertTitle>Updating library</AlertTitle>
+            <AlertDescription>
+              Pilot360 LMS is saving your changes.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {errorMessage ? (
+          <Alert variant="destructive">
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        {activeTab === "library" ? (
+          visibleItems.length === 0 ? (
+            <Card className="border-dashed p-10 text-center text-sm text-muted-foreground">
+              {deferredQuery ? "No files or folders match your search." : "No files or folders in this location."}
+            </Card>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+              {visibleItems.map((item) => {
+                const result = deferredQuery ? searchResultById.get(item.id) ?? null : null;
+                const actions = getItemActions(item);
+
+                return (
+                  <LibraryItemTile
+                    contextMenu={renderContextActions(actions)}
+                    detailText={result?.path}
+                    item={item}
+                    key={item.id}
+                    menu={renderDropdownActions(actions)}
+                    onDoubleClick={() => openItem(item)}
+                  />
+                );
+              })}
+            </div>
+          )
+        ) : (
+          <Card className="p-0">
+            {isUsersLoading && !usersPage ? (
+              <div className="px-6 py-10 text-center text-sm text-muted-foreground">
+                Loading students…
+              </div>
+            ) : (
+              <>
+                <div className="divide-y divide-border/50">
+                  {studentUsers.length === 0 ? (
+                    <p className="px-6 py-10 text-center text-sm text-muted-foreground">
+                      {deferredUserQuery
+                        ? "No students match this search."
+                        : "No students registered yet."}
+                    </p>
+                  ) : (
+                    studentUsers.map((user) => {
+                      const pending = isPendingApprovalUser(user);
+                      const rejected = isRejectedUser(user);
 
                       return (
-                      <div key={user.id} className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <p className="text-sm font-medium">{user.name}</p>
-                          <p className="text-xs text-muted-foreground">{user.email}</p>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Registered {formatDateTime(typeof user.createdAt === "string" ? user.createdAt : user.createdAt?.toISOString?.() ?? null)}
-                          </p>
-                          {user.banReason ? (
+                        <div
+                          className="flex flex-col gap-4 px-6 py-4 lg:flex-row lg:items-center lg:justify-between"
+                          key={user.id}
+                        >
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-sm font-medium">{user.name}</p>
+                              {renderUserStatus(user)}
+                            </div>
+                            <p className="mt-1 text-sm text-muted-foreground">{user.email}</p>
                             <p className="mt-1 text-xs text-muted-foreground">
-                              {isPending ? "Awaiting admin approval" : user.banReason}
+                              Registered {formatDateTime(
+                                typeof user.createdAt === "string"
+                                  ? user.createdAt
+                                  : user.createdAt?.toISOString?.() ?? null,
+                              )}
                             </p>
-                          ) : null}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {isPending ? (
-                            <>
-                              <Badge variant="secondary">Pending</Badge>
-                              <Button onClick={() => void handleUserAction("approve-user", user.id)} size="sm">
+                            {user.banReason ? (
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {pending ? "Awaiting admin approval" : user.banReason}
+                              </p>
+                            ) : null}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            {pending ? (
+                              <>
+                                <Button
+                                  disabled={isBusy}
+                                  onClick={() => void handleUserAction("approve-user", user.id)}
+                                  size="sm"
+                                  type="button"
+                                >
+                                  Approve
+                                </Button>
+                                <Button
+                                  disabled={isBusy}
+                                  onClick={() => void handleUserAction("reject-user", user.id)}
+                                  size="sm"
+                                  type="button"
+                                  variant="destructive"
+                                >
+                                  Reject
+                                </Button>
+                              </>
+                            ) : rejected ? (
+                              <Button
+                                disabled={isBusy}
+                                onClick={() => void handleUserAction("approve-user", user.id)}
+                                size="sm"
+                                type="button"
+                              >
                                 Approve
                               </Button>
-                            </>
-                          ) : !user.banned ? (
-                            <>
-                              <Badge variant="secondary">Active</Badge>
-                              <Button onClick={() => void handleUserAction("ban-user", user.id)} size="sm" variant="outline">
+                            ) : !user.banned ? (
+                              <Button
+                                disabled={isBusy}
+                                onClick={() => void handleUserAction("ban-user", user.id)}
+                                size="sm"
+                                type="button"
+                                variant="outline"
+                              >
                                 Ban
                               </Button>
-                            </>
-                          ) : (
-                            <>
-                              <Badge variant="destructive">Banned</Badge>
-                              <Button onClick={() => void handleUserAction("approve-user", user.id)} size="sm">
+                            ) : (
+                              <Button
+                                disabled={isBusy}
+                                onClick={() => void handleUserAction("approve-user", user.id)}
+                                size="sm"
+                                type="button"
+                              >
                                 Unban
                               </Button>
-                            </>
-                          )}
+                            )}
+                          </div>
                         </div>
-                      </div>
                       );
-                    })()
-                  ))
-                )}
-              </div>
-            </Card>
-          )}
-        </section>
+                    })
+                  )}
+                </div>
+
+                {usersPage ? (
+                  <div className="flex flex-col gap-3 border-t border-border/50 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-muted-foreground">
+                      Page {usersPage.page} of {usersPage.totalPages} • {usersPage.pageSize} per page
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        disabled={isUsersLoading || usersPage.page <= 1}
+                        onClick={() => {
+                          updateRouteState({
+                            folderId: selectedFolderId,
+                            openId,
+                            q,
+                            tab: "users",
+                            userPage: Math.max(1, usersPage.page - 1),
+                            userQ,
+                          });
+                        }}
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        <IconChevronLeft className="size-4" />
+                        Previous
+                      </Button>
+                      <Button
+                        disabled={isUsersLoading || usersPage.page >= usersPage.totalPages}
+                        onClick={() => {
+                          updateRouteState({
+                            folderId: selectedFolderId,
+                            openId,
+                            q,
+                            tab: "users",
+                            userPage: Math.min(usersPage.totalPages, usersPage.page + 1),
+                            userQ,
+                          });
+                        }}
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        Next
+                        <IconChevronRight className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+              </>
+            )}
+          </Card>
+        )}
       </main>
 
       <Dialog
@@ -886,10 +1325,7 @@ function AdminDashboardPage() {
             </DialogHeader>
             <form className="mt-4" onSubmit={handleCreateFolder}>
               <Input
-                onChange={(event) => {
-                  const target = event.currentTarget as unknown as { value: string };
-                  setDraftName(target.value);
-                }}
+                onChange={(event) => setDraftName(event.currentTarget.value)}
                 placeholder="Folder name"
                 value={draftName}
               />
@@ -913,10 +1349,7 @@ function AdminDashboardPage() {
             </DialogHeader>
             <form className="mt-4" onSubmit={handleRename}>
               <Input
-                onChange={(event) => {
-                  const target = event.currentTarget as unknown as { value: string };
-                  setDraftName(target.value);
-                }}
+                onChange={(event) => setDraftName(event.currentTarget.value)}
                 value={draftName}
               />
               <DialogFooter>
@@ -939,11 +1372,8 @@ function AdminDashboardPage() {
             </DialogHeader>
             <form className="mt-4" onSubmit={handleMove}>
               <select
-                className="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
-                onChange={(event) => {
-                  const target = event.currentTarget as unknown as { value: string };
-                  setMoveParentId(target.value);
-                }}
+                className="h-9 w-full rounded-[4px] border border-border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+                onChange={(event) => setMoveParentId(event.currentTarget.value)}
                 value={moveParentId}
               >
                 <option value="__root__">Root</option>
@@ -975,7 +1405,12 @@ function AdminDashboardPage() {
             </DialogHeader>
             <DialogFooter>
               <DialogDismiss>Cancel</DialogDismiss>
-              <Button disabled={isBusy} onClick={() => void handleDelete()} type="button" variant="destructive">
+              <Button
+                disabled={isBusy}
+                onClick={() => void handleDelete()}
+                type="button"
+                variant="destructive"
+              >
                 Delete
               </Button>
             </DialogFooter>

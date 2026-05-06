@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm";
 
 import { documentStorage } from "@/bucket/s3-storage";
 import { db } from "@/db/index";
@@ -18,6 +18,18 @@ type SessionLike = {
 };
 
 type LibraryItemRow = typeof libraryItem.$inferSelect;
+
+const libraryItemSummarySelection = {
+  contentType: libraryItem.contentType,
+  createdAt: libraryItem.createdAt,
+  id: libraryItem.id,
+  kind: libraryItem.kind,
+  name: libraryItem.name,
+  parentId: libraryItem.parentId,
+  size: libraryItem.size,
+  status: libraryItem.status,
+  updatedAt: libraryItem.updatedAt,
+} as const;
 
 function isAdminSession(session: SessionLike | null | undefined) {
   return (session?.user.role ?? "user") === "admin";
@@ -136,12 +148,16 @@ async function listAllLibraryItemRows() {
 }
 
 export async function listLibraryItemsForSession(session?: SessionLike | null) {
-  const rows = await listAllLibraryItemRows();
-  const visibleRows = isAdminSession(session)
-    ? rows
-    : rows.filter((item) => item.kind === "folder" || item.status === "approved");
+  const whereClause = isAdminSession(session)
+    ? undefined
+    : or(eq(libraryItem.kind, "folder"), eq(libraryItem.status, "approved"));
 
-  return visibleRows.map(serializeLibraryItem);
+  const rows = await db
+    .select(libraryItemSummarySelection)
+    .from(libraryItem)
+    .where(whereClause);
+
+  return rows.map(serializeLibraryItem);
 }
 
 export async function createLibraryFolder(input: {
@@ -451,8 +467,62 @@ export async function listAdminUsers() {
 }
 
 export async function loadAdminLibrarySnapshot() {
-  const items = await listAllLibraryItemRows();
+  const items = await db.select(libraryItemSummarySelection).from(libraryItem);
   return items.map(serializeLibraryItem);
+}
+
+export async function listAdminUsersPage(input: {
+  page: number;
+  pageSize: number;
+  query?: string | null;
+}) {
+  const { user } = await import("@/db/schema");
+
+  const normalizedQuery = input.query?.trim() ?? "";
+  const pageSize = Math.max(1, input.pageSize);
+  const conditions = [ne(user.role, "admin")];
+
+  if (normalizedQuery) {
+    const pattern = `%${normalizedQuery}%`;
+    conditions.push(or(ilike(user.name, pattern), ilike(user.email, pattern))!);
+  }
+
+  const whereClause = and(...conditions);
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(user)
+    .where(whereClause);
+  const totalUsers = Number(count) || 0;
+  const totalPages = Math.max(1, Math.ceil(totalUsers / pageSize));
+  const page = Math.min(Math.max(1, input.page), totalPages);
+
+  const users = await db
+    .select({
+      banReason: user.banReason,
+      banned: user.banned,
+      createdAt: user.createdAt,
+      email: user.email,
+      id: user.id,
+      name: user.name,
+      role: user.role,
+    })
+    .from(user)
+    .where(whereClause)
+    .orderBy(desc(user.createdAt))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
+
+  return {
+    page,
+    pageSize,
+    query: normalizedQuery,
+    totalPages,
+    totalUsers,
+    users: users.map((current) => ({
+      ...current,
+      createdAt: toIsoString(current.createdAt),
+    })),
+  };
 }
 
 export async function loadLibraryItemChildren(parentId: string | null) {

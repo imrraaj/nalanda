@@ -65,6 +65,13 @@ export async function getSignInBlockReasonByEmail(
     };
   }
 
+  if (normalizedReason === "access request rejected by admin") {
+    return {
+      code: "BANNED_USER",
+      message: "This account request was rejected by an administrator.",
+    };
+  }
+
   return {
     code: "BANNED_USER",
     message: banReason || "This account has been banned.",

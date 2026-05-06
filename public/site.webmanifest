@@ -1,7 +1,7 @@
 {
-  "name": "Nalanda",
-  "short_name": "Nalanda",
-  "description": "Nalanda is an aviation academy library for DGCA, FAA, and instructor-curated study material.",
+  "name": "Pilot360 LMS",
+  "short_name": "Pilot360",
+  "description": "Pilot360 LMS is the aviation training library for Pilot 360 students and instructors.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#10162b",

@@ -17,9 +17,9 @@ function HomePage() {
       </div>
 
       <div className="relative z-10 flex flex-col items-center text-center">
-        <BrandMark className="mb-8 scale-125" />
+        <BrandMark className="mb-8 scale-115 sm:scale-125" />
 
-        <Badge text="Academic document platform" />
+        <Badge text="Aviation training library" />
 
         <h1 className="mt-5 max-w-xl font-heading text-4xl font-normal tracking-tight sm:text-5xl">
           <span className="bg-linear-to-r from-foreground via-foreground/90 to-primary bg-clip-text text-transparent">
@@ -28,20 +28,19 @@ function HomePage() {
         </h1>
 
         <p className="mt-4 max-w-md text-base text-muted-foreground">
-          A curated library of academic material — managed by faculty, accessible to students.
+          A curated library of pilot-training material, managed by instructors and accessible to students.
         </p>
 
         <div className="mt-8 flex flex-col items-center gap-3">
           <Link
             className={buttonVariants({ className: "h-11 px-6 font-semibold", size: "lg" })}
-            search={{ folderId: "", openId: "", q: "" }}
             to="/dashboard"
           >
             Go to dashboard
           </Link>
 
           <div className="flex items-center gap-4 text-sm">
-            <Link className="text-primary hover:underline" search={{ redirectTo: "" }} to="/login">
+            <Link className="text-primary hover:underline" to="/login">
               Login
             </Link>
             <Link className="text-primary hover:underline" to="/signup">

@@ -1,4 +1,4 @@
-# Nalanda
+# Pilot360 LMS
 
 To install dependencies:
 

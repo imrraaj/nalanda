@@ -9,9 +9,14 @@ import {
 } from "@tabler/icons-react";
 
 import { Card } from "@/components/ui/card";
+import {
+  ContextMenuRoot,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { getLibraryItemKindLabel, type LibraryItemSummary } from "@/lib/library";
 
 type LibraryItemTileProps = {
+  contextMenu?: ReactNode;
   detailText?: string;
   item: LibraryItemSummary;
   menu?: ReactNode;
@@ -35,13 +40,14 @@ function getTileIcon(item: Pick<LibraryItemSummary, "kind">) {
 }
 
 export function LibraryItemTile({
+  contextMenu,
   detailText,
   item,
   menu,
   metaText,
   onDoubleClick,
 }: LibraryItemTileProps) {
-  return (
+  const content = (
     <Card
       className="gap-0 rounded-[4px] py-0 transition-colors hover:bg-muted/20 data-[interactive=true]:cursor-pointer"
       data-interactive={onDoubleClick ? "true" : "false"}
@@ -73,5 +79,16 @@ export function LibraryItemTile({
         ) : null}
       </div>
     </Card>
+  );
+
+  if (!contextMenu) {
+    return content;
+  }
+
+  return (
+    <ContextMenuRoot>
+      <ContextMenuTrigger>{content}</ContextMenuTrigger>
+      {contextMenu}
+    </ContextMenuRoot>
   );
 }

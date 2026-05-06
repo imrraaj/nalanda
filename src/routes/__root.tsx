@@ -6,6 +6,7 @@ import {
   createRootRoute,
   HeadContent,
   Scripts,
+  useRouterState,
 } from "@tanstack/react-router";
 
 import appCss from "@/styles/index.css?url";
@@ -21,20 +22,20 @@ export const Route = createRootRoute({
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "Nalanda | Aviation Academy Library",
+        title: "Pilot360 LMS | Aviation Training Library",
       },
       {
         name: "description",
         content:
-          "Nalanda is an aviation academy library for DGCA, FAA, and instructor-curated study material, training documents, and exam resources.",
+          "Pilot360 LMS is the training library for Pilot 360 students, instructor-led aviation study, DGCA preparation, and ground-school learning material.",
       },
       {
         name: "application-name",
-        content: "Nalanda",
+        content: "Pilot360 LMS",
       },
       {
         name: "apple-mobile-web-app-title",
-        content: "Nalanda",
+        content: "Pilot360 LMS",
       },
       {
         name: "theme-color",
@@ -54,16 +55,16 @@ export const Route = createRootRoute({
       },
       {
         property: "og:site_name",
-        content: "Nalanda",
+        content: "Pilot360 LMS",
       },
       {
         property: "og:title",
-        content: "Nalanda | Aviation Academy Library",
+        content: "Pilot360 LMS | Aviation Training Library",
       },
       {
         property: "og:description",
         content:
-          "Nalanda is an aviation academy library for DGCA, FAA, and instructor-curated study material, training documents, and exam resources.",
+          "Pilot360 LMS is the training library for Pilot 360 students, instructor-led aviation study, DGCA preparation, and ground-school learning material.",
       },
       {
         property: "og:image",
@@ -75,12 +76,12 @@ export const Route = createRootRoute({
       },
       {
         name: "twitter:title",
-        content: "Nalanda | Aviation Academy Library",
+        content: "Pilot360 LMS | Aviation Training Library",
       },
       {
         name: "twitter:description",
         content:
-          "Nalanda is an aviation academy library for DGCA, FAA, and instructor-curated study material, training documents, and exam resources.",
+          "Pilot360 LMS is the training library for Pilot 360 students, instructor-led aviation study, DGCA preparation, and ground-school learning material.",
       },
       {
         name: "twitter:image",
@@ -99,8 +100,13 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
+  const isNavigating = useRouterState({
+    select: (state) =>
+      state.status === "pending" || state.isLoading || state.isTransitioning,
+  });
+
   return (
-    <RootDocument>
+    <RootDocument isNavigating={isNavigating}>
       <ErrorBoundary>
         <Outlet />
       </ErrorBoundary>
@@ -108,13 +114,26 @@ function RootComponent() {
   );
 }
 
-function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
+function RootDocument({
+  children,
+  isNavigating,
+}: Readonly<{ children: ReactNode; isNavigating: boolean }>) {
   return (
     <html className="dark h-full" lang="en">
       <head>
         <HeadContent />
       </head>
       <body className="min-h-screen bg-background text-foreground antialiased">
+        <div
+          aria-hidden={!isNavigating}
+          className="pointer-events-none fixed inset-x-0 top-0 z-[100] h-0.5 overflow-hidden"
+        >
+          <div
+            className={`h-full bg-primary transition-all duration-150 ${
+              isNavigating ? "opacity-100" : "opacity-0"
+            } ${isNavigating ? "w-[38%] animate-pulse" : "w-0"}`}
+          />
+        </div>
         {children}
         <Scripts />
       </body>

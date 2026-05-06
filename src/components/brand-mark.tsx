@@ -16,12 +16,12 @@ export function BrandMark({ className }: BrandMarkProps) {
       )}
     >
       <img
-        alt=""
+        alt="Pilot360 LMS"
         aria-hidden="true"
         className="h-7 w-7 rounded-lg"
         src="/favicon.svg"
       />
-      Nalanda
+      Pilot360 LMS
     </Link>
   );
 }

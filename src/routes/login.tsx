@@ -16,10 +16,7 @@ export const Route = createFileRoute("/login")({
     const session = await getSession();
 
     if (session) {
-      throw redirect({
-        search: { folderId: "", openId: "", q: "" },
-        to: "/dashboard",
-      });
+      throw redirect({ to: "/dashboard" });
     }
   },
   component: LoginPage,
@@ -56,10 +53,7 @@ function LoginPage() {
       }
 
       startTransition(() => {
-        void navigate({
-          search: { folderId: "", openId: "", q: "" },
-          to: "/dashboard",
-        });
+        void navigate({ to: "/dashboard" });
       });
     } catch {
       setErrorMessage("Sign in failed. Try again shortly.");
