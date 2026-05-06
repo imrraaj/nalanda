@@ -42,22 +42,6 @@ export function formatDateTime(value?: string | null) {
   }).format(date);
 }
 
-export function deriveNameFromEmail(email: string) {
-  const localPart = email.split("@")[0]?.trim() ?? "";
-
-  if (!localPart) {
-    return "Memoir User";
-  }
-
-  const words = localPart
-    .split(/[._-]+/)
-    .filter(Boolean)
-    .map((part) => part[0]?.toUpperCase() + part.slice(1));
-
-  return words.join(" ") || "Memoir User";
-}
-
-
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 

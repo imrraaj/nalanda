@@ -1,0 +1,17 @@
+{
+  "name": "Nalanda",
+  "short_name": "Nalanda",
+  "description": "Nalanda is an aviation academy library for DGCA, FAA, and instructor-curated study material.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#10162b",
+  "theme_color": "#1b2448",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

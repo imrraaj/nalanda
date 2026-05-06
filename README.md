@@ -1,4 +1,4 @@
-# memoir
+# Nalanda
 
 To install dependencies:
 

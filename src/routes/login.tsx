@@ -8,6 +8,9 @@ import { Input } from "@/components/ui/input";
 import { signInWithEmail } from "@/lib/auth.actions";
 
 export const Route = createFileRoute("/login")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirectTo: typeof search.redirectTo === "string" ? search.redirectTo : "",
+  }),
   beforeLoad: async () => {
     const { getSession } = await import("@/lib/auth.function");
     const session = await getSession();
@@ -24,6 +27,7 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
+  const { redirectTo } = Route.useSearch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -43,6 +47,11 @@ function LoginPage() {
 
       if (result?.error) {
         setErrorMessage(result.error.message ?? "Sign in failed.");
+        return;
+      }
+
+      if (redirectTo.startsWith("/")) {
+        window.location.assign(redirectTo);
         return;
       }
 

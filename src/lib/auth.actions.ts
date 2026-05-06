@@ -1,5 +1,7 @@
 import { createClientOnlyFn } from "@tanstack/react-start";
 
+import { getSignInBlockReason } from "@/lib/auth.function";
+
 type SignInInput = {
   email: string;
   password: string;
@@ -15,11 +17,29 @@ type SignUpInput = {
 export const signInWithEmail = createClientOnlyFn(async (input: SignInInput) => {
   const { authClient } = await import("@/lib/auth.client");
 
-  return authClient.signIn.email({
+  const result = await authClient.signIn.email({
     email: input.email,
     password: input.password,
     rememberMe: input.rememberMe ?? true,
   });
+
+  if (
+    result?.error?.code === "INVALID_EMAIL_OR_PASSWORD" ||
+    result?.error?.code === "BANNED_USER"
+  ) {
+    const blockReason = await getSignInBlockReason({
+      data: { email: input.email },
+    });
+
+    if (blockReason) {
+      return {
+        ...result,
+        error: blockReason,
+      };
+    }
+  }
+
+  return result;
 });
 
 export const signUpWithEmail = createClientOnlyFn(async (input: SignUpInput) => {

@@ -135,7 +135,7 @@ async function listAllLibraryItemRows() {
   return db.select().from(libraryItem);
 }
 
-export async function listLibraryItemsForSession(session: SessionLike) {
+export async function listLibraryItemsForSession(session?: SessionLike | null) {
   const rows = await listAllLibraryItemRows();
   const visibleRows = isAdminSession(session)
     ? rows

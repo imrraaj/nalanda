@@ -1,7 +1,7 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 
 import { BrandMark } from "@/components/brand-mark";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -31,22 +31,23 @@ function HomePage() {
           A curated library of academic material — managed by faculty, accessible to students.
         </p>
 
-        <div className="mt-8 flex gap-3">
-          <Button size="lg" className="h-11 px-6 font-semibold">
-            <Link to="/login">Log in</Link>
-          </Button>
-          <Button variant="outline" size="lg" className="h-11 px-6">
-            <Link to="/signup">Create account</Link>
-          </Button>
-        </div>
+        <div className="mt-8 flex flex-col items-center gap-3">
+          <Link
+            className={buttonVariants({ className: "h-11 px-6 font-semibold", size: "lg" })}
+            search={{ folderId: "", openId: "", q: "" }}
+            to="/dashboard"
+          >
+            Go to dashboard
+          </Link>
 
-        {/* Feature pills */}
-        <div className="mt-12 flex flex-wrap justify-center gap-2">
-          {["PDF Reader", "Faculty Uploads", "Student Access", "Secure Auth"].map((f) => (
-            <span key={f} className="border border-border/60 bg-card/50 px-3 py-1 text-xs text-muted-foreground backdrop-blur">
-              {f}
-            </span>
-          ))}
+          <div className="flex items-center gap-4 text-sm">
+            <Link className="text-primary hover:underline" search={{ redirectTo: "" }} to="/login">
+              Login
+            </Link>
+            <Link className="text-primary hover:underline" to="/signup">
+              Create Account
+            </Link>
+          </div>
         </div>
       </div>
     </div>

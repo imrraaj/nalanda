@@ -21,14 +21,78 @@ export const Route = createRootRoute({
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "Memoir",
+        title: "Nalanda | Aviation Academy Library",
+      },
+      {
+        name: "description",
+        content:
+          "Nalanda is an aviation academy library for DGCA, FAA, and instructor-curated study material, training documents, and exam resources.",
+      },
+      {
+        name: "application-name",
+        content: "Nalanda",
+      },
+      {
+        name: "apple-mobile-web-app-title",
+        content: "Nalanda",
       },
       {
         name: "theme-color",
-        content: "#120808",
+        content: "#1b2448",
+      },
+      {
+        name: "robots",
+        content: "index, follow",
+      },
+      {
+        name: "format-detection",
+        content: "telephone=no",
+      },
+      {
+        property: "og:type",
+        content: "website",
+      },
+      {
+        property: "og:site_name",
+        content: "Nalanda",
+      },
+      {
+        property: "og:title",
+        content: "Nalanda | Aviation Academy Library",
+      },
+      {
+        property: "og:description",
+        content:
+          "Nalanda is an aviation academy library for DGCA, FAA, and instructor-curated study material, training documents, and exam resources.",
+      },
+      {
+        property: "og:image",
+        content: "/cessna.png",
+      },
+      {
+        name: "twitter:card",
+        content: "summary_large_image",
+      },
+      {
+        name: "twitter:title",
+        content: "Nalanda | Aviation Academy Library",
+      },
+      {
+        name: "twitter:description",
+        content:
+          "Nalanda is an aviation academy library for DGCA, FAA, and instructor-curated study material, training documents, and exam resources.",
+      },
+      {
+        name: "twitter:image",
+        content: "/cessna.png",
       },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      { rel: "shortcut icon", href: "/favicon.svg" },
+      { rel: "manifest", href: "/site.webmanifest" },
+    ],
   }),
   component: RootComponent,
   notFoundComponent: NotFoundPage,

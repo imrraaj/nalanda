@@ -99,11 +99,12 @@ export const Route = createFileRoute("/reader")({
     const session = await getSession();
 
     if (!session) {
-      throw redirect({ to: "/login" });
+      const redirectTo = `/reader?itemId=${encodeURIComponent(search.itemId)}&name=${encodeURIComponent(search.name)}`;
+      throw redirect({ search: { redirectTo }, to: "/login" });
     }
 
     if (!search.itemId) {
-      throw redirect({ to: "/dashboard" });
+      throw redirect({ search: { folderId: "", openId: "", q: "" }, to: "/dashboard" });
     }
   },
   component: ReaderPage,
@@ -266,7 +267,7 @@ function ReaderPage() {
           setErrorMessage(
             error instanceof Error
               ? error.message
-              : "Unable to open this PDF in the Memoir reader.",
+              : "Unable to open this PDF in the Nalanda reader.",
           );
           setIsLoading(false);
         }
@@ -389,7 +390,7 @@ function ReaderPage() {
   return (
     <main aria-label={`${displayName} reader`} className="h-screen">
       <div className="h-full">
-        <Card className="memoir-pdf-shell flex h-full flex-col overflow-hidden rounded-none border-0 p-0">
+        <Card className="nalanda-pdf-shell flex h-full flex-col overflow-hidden rounded-none border-0 p-0">
           <div className="border-b border-white/10 bg-black/26 px-3 py-3 backdrop-blur-sm sm:px-4">
             <div className="flex flex-wrap items-center gap-2">
               <Button
@@ -620,7 +621,7 @@ function ReaderPage() {
               <Alert>
                 <AlertTitle>Loading PDF viewer</AlertTitle>
                 <AlertDescription>
-                  Memoir is streaming the PDF through the app server and initializing the viewer.
+                  Nalanda is streaming the PDF through the app server and initializing the viewer.
                 </AlertDescription>
               </Alert>
             </div>

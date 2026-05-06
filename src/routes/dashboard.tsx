@@ -5,7 +5,7 @@ import {
   IconInfoCircle,
   IconSearch,
 } from "@tabler/icons-react";
-import { Link, createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
 
 import { BrandMark } from "@/components/brand-mark";
@@ -51,14 +51,6 @@ export const Route = createFileRoute("/dashboard")({
     openId: typeof search.openId === "string" ? search.openId : "",
     q: typeof search.q === "string" ? search.q : "",
   }),
-  beforeLoad: async () => {
-    const { getSession } = await import("@/lib/auth.function");
-    const session = await getSession();
-
-    if (!session) {
-      throw redirect({ to: "/login" });
-    }
-  },
   loader: async () => {
     const [{ getSession }, { loadDashboardLibraryData }] = await Promise.all([
       import("@/lib/auth.function"),
@@ -66,16 +58,14 @@ export const Route = createFileRoute("/dashboard")({
     ]);
     const [session, data] = await Promise.all([getSession(), loadDashboardLibraryData()]);
 
-    if (!session) {
-      throw redirect({ to: "/login" });
-    }
-
     return {
       items: data.items,
-      viewer: {
-        name: session.user.name,
-        role: (session.user as { role?: string | null }).role ?? "user",
-      },
+      viewer: session
+        ? {
+            name: session.user.name,
+            role: (session.user as { role?: string | null }).role ?? "user",
+          }
+        : null,
     };
   },
   component: DashboardPage,
@@ -104,6 +94,15 @@ function DashboardPage() {
   }, [items, openId]);
 
   useEffect(() => {
+    if (downloadItem && !viewer) {
+      const redirectTo = `/dashboard?folderId=${encodeURIComponent(downloadItem.parentId ?? "")}&openId=${encodeURIComponent(downloadItem.id)}&q=`;
+      void navigate({
+        search: { redirectTo },
+        to: "/login",
+      });
+      return;
+    }
+
     if (selectedFolderId && !items.some((item) => item.id === selectedFolderId && item.kind === "folder")) {
       void navigate({
         replace: true,
@@ -162,7 +161,7 @@ function DashboardPage() {
 
       return next;
     });
-  }, [dialog, downloadItem, items, navigate, openId, q, selectedFolderId]);
+  }, [dialog, downloadItem, items, navigate, openId, q, selectedFolderId, viewer]);
 
   useEffect(() => {
     if (downloadItem && isPdfItem(downloadItem)) {
@@ -269,6 +268,17 @@ function DashboardPage() {
       return;
     }
 
+    if (!viewer) {
+      const redirectTo = isPdfItem(item)
+        ? `/reader?itemId=${encodeURIComponent(item.id)}&name=${encodeURIComponent(item.name)}`
+        : `/dashboard?folderId=${encodeURIComponent(item.parentId ?? "")}&openId=${encodeURIComponent(item.id)}&q=`;
+      void navigate({
+        search: { redirectTo },
+        to: "/login",
+      });
+      return;
+    }
+
     if (isPdfItem(item)) {
       void navigate({
         search: { itemId: item.id, name: item.name },
@@ -302,7 +312,7 @@ function DashboardPage() {
             <span className="text-sm font-medium">Library</span>
           </div>
           <div className="flex items-center gap-3">
-            {viewer.role === "admin" ? (
+            {viewer?.role === "admin" ? (
               <Link
                 className={buttonVariants({ size: "sm", variant: "outline" })}
                 search={{ folderId: "", openId: "", q: "" }}
@@ -311,12 +321,20 @@ function DashboardPage() {
                 Admin
               </Link>
             ) : null}
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-xs font-semibold text-primary">
-              {getInitials(viewer.name)}
-            </div>
-            <Button onClick={handleSignOut} size="sm" variant="ghost">
-              Sign out
-            </Button>
+            {viewer ? (
+              <>
+                <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-xs font-semibold text-primary">
+                  {getInitials(viewer.name)}
+                </div>
+                <Button onClick={handleSignOut} size="sm" variant="ghost">
+                  Sign out
+                </Button>
+              </>
+            ) : (
+              <Link className={buttonVariants({ size: "sm" })} search={{ redirectTo: "/dashboard" }} to="/login">
+                Log in
+              </Link>
+            )}
           </div>
         </div>
       </header>

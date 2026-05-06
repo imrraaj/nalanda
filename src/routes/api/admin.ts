@@ -84,7 +84,10 @@ export const Route = createFileRoute("/api/admin")({
         if (action === "approve-user") {
           const { id } = body as { id?: string };
           if (!id) return json({ error: "id is required" }, 400);
-          await auth.api.unbanUser({ body: { userId: id } });
+          await auth.api.unbanUser({
+            body: { userId: id },
+            headers: request.headers,
+          });
           return json({ ok: true });
         }
 
@@ -92,7 +95,8 @@ export const Route = createFileRoute("/api/admin")({
           const { id } = body as { id?: string };
           if (!id) return json({ error: "id is required" }, 400);
           await auth.api.banUser({
-            body: { userId: id, banReason: "Awaiting approval" },
+            body: { userId: id, banReason: "Access disabled by admin" },
+            headers: request.headers,
           });
           return json({ ok: true });
         }

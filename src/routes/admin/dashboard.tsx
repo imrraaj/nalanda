@@ -49,10 +49,12 @@ import {
   searchLibraryItems,
   type LibraryItemSummary,
 } from "@/lib/library";
-import { getInitials } from "@/lib/utils";
+import { formatDateTime, getInitials } from "@/lib/utils";
 
 type AdminUser = {
+  banReason?: string | null;
   banned: boolean | null;
+  createdAt?: string | Date | null;
   email: string;
   id: string;
   name: string;
@@ -70,6 +72,15 @@ type FileInputWithRelativePath = File & {
   webkitRelativePath?: string;
 };
 
+function isPendingApprovalUser(user: AdminUser) {
+  if (!user.banned) {
+    return false;
+  }
+
+  const reason = user.banReason?.toLowerCase().trim() ?? "";
+  return reason === "pending admin approval" || reason === "awaiting approval";
+}
+
 export const Route = createFileRoute("/admin/dashboard")({
   validateSearch: (search: Record<string, unknown>) => ({
     folderId: typeof search.folderId === "string" ? search.folderId : "",
@@ -79,7 +90,7 @@ export const Route = createFileRoute("/admin/dashboard")({
   beforeLoad: async () => {
     const { getSession } = await import("@/lib/auth.function");
     const session = await getSession();
-    if (!session) throw redirect({ to: "/login" });
+    if (!session) throw redirect({ search: { redirectTo: "" }, to: "/login" });
     if ((session.user as { role?: string }).role !== "admin") {
       throw redirect({ search: { folderId: "", openId: "", q: "" }, to: "/dashboard" });
     }
@@ -92,7 +103,7 @@ export const Route = createFileRoute("/admin/dashboard")({
     const [session, data] = await Promise.all([getSession(), loadAdminDashboardData()]);
 
     if (!session) {
-      throw redirect({ to: "/login" });
+      throw redirect({ search: { redirectTo: "" }, to: "/login" });
     }
 
     if ((session.user as { role?: string }).role !== "admin") {
@@ -242,6 +253,25 @@ function AdminDashboardPage() {
   const moveOptions = useMemo(
     () => getLibraryFolderOptions(items, dialogItem?.kind === "folder" ? dialogItem.id : null),
     [dialogItem, items],
+  );
+  const studentUsers = useMemo(
+    () =>
+      users
+        .filter((user) => user.role !== "admin")
+        .sort((left, right) => {
+          const leftPending = isPendingApprovalUser(left) ? 0 : 1;
+          const rightPending = isPendingApprovalUser(right) ? 0 : 1;
+
+          if (leftPending !== rightPending) {
+            return leftPending - rightPending;
+          }
+
+          const leftTime = left.createdAt ? new Date(left.createdAt).getTime() : 0;
+          const rightTime = right.createdAt ? new Date(right.createdAt).getTime() : 0;
+
+          return rightTime - leftTime;
+        }),
+    [users],
   );
   const downloadHref = downloadItem
     ? `/api/documents/content?itemId=${encodeURIComponent(downloadItem.id)}&download=1`
@@ -698,7 +728,7 @@ function AdminDashboardPage() {
               <div>
                 <h1 className="text-2xl font-semibold tracking-tight">Students</h1>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Approve or block student access from the main menu actions.
+                  Review pending registrations, approve access, or disable existing students.
                 </p>
               </div>
             )}
@@ -771,21 +801,38 @@ function AdminDashboardPage() {
           ) : (
             <Card className="p-0">
               <div className="divide-y divide-border/50">
-                {users.filter((user) => user.role !== "admin").length === 0 ? (
+                {studentUsers.length === 0 ? (
                   <p className="px-6 py-10 text-center text-sm text-muted-foreground">
                     No students registered yet.
                   </p>
                 ) : (
-                  users
-                    .filter((user) => user.role !== "admin")
-                    .map((user) => (
+                  studentUsers.map((user) => (
+                    (() => {
+                      const isPending = isPendingApprovalUser(user);
+
+                      return (
                       <div key={user.id} className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                           <p className="text-sm font-medium">{user.name}</p>
                           <p className="text-xs text-muted-foreground">{user.email}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Registered {formatDateTime(typeof user.createdAt === "string" ? user.createdAt : user.createdAt?.toISOString?.() ?? null)}
+                          </p>
+                          {user.banReason ? (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {isPending ? "Awaiting admin approval" : user.banReason}
+                            </p>
+                          ) : null}
                         </div>
                         <div className="flex items-center gap-2">
-                          {!user.banned ? (
+                          {isPending ? (
+                            <>
+                              <Badge variant="secondary">Pending</Badge>
+                              <Button onClick={() => void handleUserAction("approve-user", user.id)} size="sm">
+                                Approve
+                              </Button>
+                            </>
+                          ) : !user.banned ? (
                             <>
                               <Badge variant="secondary">Active</Badge>
                               <Button onClick={() => void handleUserAction("ban-user", user.id)} size="sm" variant="outline">
@@ -802,7 +849,9 @@ function AdminDashboardPage() {
                           )}
                         </div>
                       </div>
-                    ))
+                      );
+                    })()
+                  ))
                 )}
               </div>
             </Card>

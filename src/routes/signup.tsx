@@ -6,7 +6,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { signUpWithEmail } from "@/lib/auth.actions";
-import { deriveNameFromEmail } from "@/lib/utils";
 
 export const Route = createFileRoute("/signup")({
   beforeLoad: async () => {
@@ -24,6 +23,7 @@ export const Route = createFileRoute("/signup")({
 });
 
 function SignUpPage() {
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -38,7 +38,7 @@ function SignUpPage() {
     try {
       const result = await signUpWithEmail({
         email: email.trim(),
-        name: deriveNameFromEmail(email),
+        name: fullName.trim(),
         password,
       });
 
@@ -62,7 +62,7 @@ function SignUpPage() {
         description="Your account is pending admin approval. You'll be able to sign in once approved."
         footer={
           <p>
-            <Link to="/login" className="text-primary hover:underline">Back to sign in</Link>
+            <Link search={{ redirectTo: "" }} to="/login" className="text-primary hover:underline">Back to sign in</Link>
           </p>
         }
       >
@@ -76,15 +76,19 @@ function SignUpPage() {
   return (
     <AuthShell
       title="Create account"
-      description="Create a student account to request access to the Memoir library."
+      description="Create a student account to request access to the Nalanda library."
       footer={
         <p>
           Already have an account?{" "}
-          <Link to="/login" className="text-primary hover:underline">Sign in</Link>
+          <Link search={{ redirectTo: "" }} to="/login" className="text-primary hover:underline">Sign in</Link>
         </p>
       }
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium uppercase tracking-widest text-muted-foreground" htmlFor="full-name">Full name</label>
+          <Input id="full-name" autoComplete="name" className="h-11 border-border bg-input text-foreground placeholder:text-muted-foreground/60" disabled={isSubmitting} onChange={(e) => setFullName(((e.currentTarget as unknown) as { value: string }).value)} placeholder="Your full name" required type="text" value={fullName} />
+        </div>
         <div className="space-y-1.5">
           <label className="text-xs font-medium uppercase tracking-widest text-muted-foreground" htmlFor="email">Email</label>
           <Input id="email" autoComplete="email" className="h-11 border-border bg-input text-foreground placeholder:text-muted-foreground/60" disabled={isSubmitting} onChange={(e) => setEmail(((e.currentTarget as unknown) as { value: string }).value)} placeholder="you@example.com" required type="email" value={email} />
