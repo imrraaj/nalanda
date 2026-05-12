@@ -5,33 +5,33 @@
 @import "@fontsource-variable/geist";
 
 :root {
-  --background: oklch(0.17 0.03 266);
-  --foreground: oklch(0.95 0.01 250);
-  --card: oklch(0.215 0.028 264);
-  --card-foreground: oklch(0.95 0.01 250);
-  --popover: oklch(0.215 0.028 264);
-  --popover-foreground: oklch(0.95 0.01 250);
-  --primary: oklch(0.66 0.16 269);
-  --primary-foreground: oklch(0.98 0.01 250);
-  --secondary: oklch(0.285 0.03 250);
-  --secondary-foreground: oklch(0.93 0.012 248);
-  --muted: oklch(0.255 0.022 258);
-  --muted-foreground: oklch(0.74 0.02 248);
-  --accent: oklch(0.305 0.05 236);
-  --accent-foreground: oklch(0.95 0.01 250);
-  --destructive: oklch(0.6 0.2 25);
-  --border: oklch(0.92 0.01 252 / 10%);
-  --input: oklch(0.94 0.01 252 / 7%);
-  --ring: oklch(0.66 0.16 269);
-  --radius: 0.125rem;
-  --sidebar: oklch(0.19 0.028 264);
-  --sidebar-foreground: oklch(0.95 0.01 250);
-  --sidebar-primary: oklch(0.66 0.16 269);
-  --sidebar-primary-foreground: oklch(0.98 0.01 250);
-  --sidebar-accent: oklch(0.285 0.03 250);
-  --sidebar-accent-foreground: oklch(0.95 0.01 250);
-  --sidebar-border: oklch(0.92 0.01 252 / 10%);
-  --sidebar-ring: oklch(0.66 0.16 269);
+  --background: rgb(246 249 255);
+  --foreground: rgb(12 29 61);
+  --card: rgb(255 255 255);
+  --card-foreground: rgb(12 29 61);
+  --popover: rgb(255 255 255);
+  --popover-foreground: rgb(12 29 61);
+  --primary: rgb(35 83 171);
+  --primary-foreground: rgb(255 255 255);
+  --secondary: rgb(222 232 249);
+  --secondary-foreground: rgb(20 55 121);
+  --muted: rgb(232 239 251);
+  --muted-foreground: rgb(82 101 137);
+  --accent: rgb(205 220 247);
+  --accent-foreground: rgb(22 61 132);
+  --destructive: rgb(174 31 55);
+  --border: rgb(192 207 235);
+  --input: rgb(235 242 253);
+  --ring: rgb(35 83 171);
+  --radius: 0.25rem;
+  --sidebar: rgb(240 246 255);
+  --sidebar-foreground: rgb(12 29 61);
+  --sidebar-primary: rgb(35 83 171);
+  --sidebar-primary-foreground: rgb(255 255 255);
+  --sidebar-accent: rgb(222 232 249);
+  --sidebar-accent-foreground: rgb(20 55 121);
+  --sidebar-border: rgb(192 207 235);
+  --sidebar-ring: rgb(35 83 171);
 }
 
 .dark {
@@ -101,13 +101,45 @@
   --radius-3xl: calc(var(--radius) * 2.4);
 }
 
+button,
+[role="button"],
+summary {
+  cursor: pointer;
+}
+
+button:disabled,
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+input,
+textarea,
+select {
+  color: var(--foreground);
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--foreground);
+  caret-color: var(--foreground);
+  box-shadow: 0 0 0 1000px var(--input) inset;
+  transition: background-color 9999s ease-out;
+}
+
 .auth-scene {
   overflow: hidden;
   background:
-    radial-gradient(circle at 18% 22%, oklch(0.74 0.11 251 / 0.22), transparent 24%),
-    radial-gradient(circle at 78% 18%, oklch(0.67 0.16 269 / 0.26), transparent 28%),
-    radial-gradient(circle at 62% 68%, oklch(0.58 0.08 222 / 0.18), transparent 26%),
-    linear-gradient(155deg, oklch(0.31 0.07 245) 0%, oklch(0.21 0.035 258) 38%, oklch(0.15 0.024 270) 100%);
+    radial-gradient(circle at 52% 34%, rgb(255 255 255 / 0.92), transparent 10%),
+    radial-gradient(circle at 18% 24%, rgb(35 83 171 / 0.24), transparent 24%),
+    radial-gradient(circle at 76% 18%, rgb(35 83 171 / 0.18), transparent 27%),
+    linear-gradient(145deg, rgb(214 226 248) 0%, rgb(239 245 255) 42%, rgb(250 252 255) 100%);
 }
 
 .auth-scene::before {
@@ -115,9 +147,10 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(118deg, transparent 18%, oklch(0.96 0.01 250 / 0.08) 19%, transparent 20%) 0 22% / 100% 16% no-repeat,
-    linear-gradient(118deg, transparent 34%, oklch(0.96 0.01 250 / 0.06) 35%, transparent 36%) 0 54% / 100% 14% no-repeat;
-  opacity: 0.9;
+    linear-gradient(rgb(35 83 171 / 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(35 83 171 / 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.8;
 }
 
 .auth-scene::after {
@@ -125,6 +158,6 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(to top, oklch(0.11 0.02 268 / 0.82), transparent 52%),
-    radial-gradient(circle at 50% 112%, oklch(0.69 0.12 240 / 0.22), transparent 34%);
+    linear-gradient(124deg, transparent 22%, rgb(35 83 171 / 0.12) 22.2%, transparent 22.5%) 0 28% / 100% 18% no-repeat,
+    radial-gradient(circle at 50% 110%, rgb(35 83 171 / 0.14), transparent 36%);
 }

@@ -11,17 +11,17 @@ export function BrandMark({ className }: BrandMarkProps) {
     <Link
       to="/"
       className={cn(
-        "inline-flex items-center gap-2.5 font-heading text-lg font-bold tracking-tight text-foreground transition-opacity hover:opacity-80",
+        "inline-flex min-w-0 items-center gap-2.5 font-heading text-base font-bold tracking-tight text-foreground transition-opacity hover:opacity-80 sm:text-lg",
         className,
       )}
     >
       <img
         alt="Pilot360 LMS"
         aria-hidden="true"
-        className="h-7 w-7 rounded-lg"
-        src="/favicon.svg"
+        className="h-7 w-7 shrink-0 rounded-lg"
+        src="/logo.webp"
       />
-      Pilot360 LMS
+      <span className="truncate">Pilot360 LMS</span>
     </Link>
   );
 }

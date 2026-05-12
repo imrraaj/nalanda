@@ -906,11 +906,11 @@ function AdminDashboardPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="sticky top-0 z-40 border-b border-border/60 bg-background/92 backdrop-blur">
-        <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between gap-3 px-4">
-          <div className="flex items-center gap-3">
-            <BrandMark />
-            <Separator className="h-5!" orientation="vertical" />
+      <header className="sticky top-0 z-40 border-b border-border/60 bg-background/95 backdrop-blur">
+        <div className="mx-auto flex min-h-14 w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:flex-nowrap sm:py-0">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3 sm:flex-nowrap">
+            <BrandMark className="max-w-[11rem] sm:max-w-none" />
+            <Separator className="hidden h-5! sm:block" orientation="vertical" />
             <nav className="flex items-center gap-1">
               <button
                 className={buttonVariants({
@@ -935,7 +935,7 @@ function AdminDashboardPage() {
             </nav>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
             {activeTab === "library" ? (
               <DropdownMenu>
                 <DropdownMenuTrigger

@@ -39,7 +39,7 @@ export const Route = createRootRoute({
       },
       {
         name: "theme-color",
-        content: "#1b2448",
+        content: "#f6f9ff",
       },
       {
         name: "robots",
@@ -90,8 +90,8 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
-      { rel: "shortcut icon", href: "/favicon.svg" },
+      { rel: "icon", type: "image/svg+xml", href: "/logo.webp" },
+      { rel: "shortcut icon", href: "/logo.webp" },
       { rel: "manifest", href: "/site.webmanifest" },
     ],
   }),
@@ -119,7 +119,7 @@ function RootDocument({
   isNavigating,
 }: Readonly<{ children: ReactNode; isNavigating: boolean }>) {
   return (
-    <html className="dark h-full" lang="en">
+    <html className="h-full" lang="en">
       <head>
         <HeadContent />
       </head>

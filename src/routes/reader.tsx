@@ -391,7 +391,7 @@ function ReaderPage() {
     <main aria-label={`${displayName} reader`} className="h-screen">
       <div className="h-full">
         <Card className="nalanda-pdf-shell flex h-full flex-col overflow-hidden rounded-none border-0 p-0">
-          <div className="border-b border-white/10 bg-black/26 px-3 py-3 backdrop-blur-sm sm:px-4">
+          <div className="border-b border-border bg-background/95 px-3 py-3 backdrop-blur-sm sm:px-4">
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 aria-label={isSidebarOpen ? "Hide page list" : "Show page list"}
@@ -424,7 +424,7 @@ function ReaderPage() {
                 <IconChevronLeft className="size-4" />
               </Button>
 
-              <div className="flex items-center gap-2 rounded-xs border border-white/10 bg-white/5 px-2 py-1">
+              <div className="flex items-center gap-2 rounded-xs border border-border bg-input/60 px-2 py-1">
                 <Input
                   className="h-7 w-16 border-0 bg-transparent px-2 py-1 text-center focus-visible:ring-0"
                   inputMode="numeric"
@@ -440,7 +440,7 @@ function ReaderPage() {
                   type="number"
                   value={pageInput}
                 />
-                <span className="text-sm text-stone-400">/ {pageCount || "--"}</span>
+                <span className="text-sm text-muted-foreground">/ {pageCount || "--"}</span>
               </div>
 
               <Button
@@ -477,7 +477,7 @@ function ReaderPage() {
               </Button>
 
               <div className="ml-auto flex flex-wrap items-center gap-2">
-                <span className="font-mono text-xs text-stone-400">{zoomLabel}</span>
+                <span className="font-mono text-xs text-muted-foreground">{zoomLabel}</span>
 
                 <Button
                   aria-label="Zoom out"
@@ -608,7 +608,7 @@ function ReaderPage() {
           </div>
 
           {errorMessage ? (
-            <div className="border-b border-white/10 px-4 py-3 sm:px-6">
+            <div className="border-b border-border px-4 py-3 sm:px-6">
               <Alert variant="destructive">
                 <AlertTitle>Viewer failed to load</AlertTitle>
                 <AlertDescription>{errorMessage}</AlertDescription>
@@ -617,7 +617,7 @@ function ReaderPage() {
           ) : null}
 
           {isLoading ? (
-            <div className="border-b border-white/10 px-4 py-3 sm:px-6">
+            <div className="border-b border-border px-4 py-3 sm:px-6">
               <Alert>
                 <AlertTitle>Loading PDF viewer</AlertTitle>
                 <AlertDescription>
@@ -636,10 +636,10 @@ function ReaderPage() {
             )}
           >
             {isSidebarOpen ? (
-              <aside className="min-h-0 overflow-hidden border-b border-r border-white/10 bg-black/24 lg:border-b-0">
+              <aside className="min-h-0 overflow-hidden border-b border-r border-border bg-muted/45 lg:border-b-0">
                 <div className="flex h-full min-h-0 flex-col">
-                  <div className="border-b border-white/10 px-4 py-3">
-                    <p className="font-mono text-[0.68rem] uppercase tracking-[0.32em] text-orange-200/70">
+                  <div className="border-b border-border px-4 py-3">
+                    <p className="font-mono text-[0.68rem] uppercase tracking-[0.32em] text-primary">
                       Pages
                     </p>
                   </div>
@@ -663,7 +663,7 @@ function ReaderPage() {
                           >
                             <span className="flex flex-col items-start gap-1">
                               <span className="font-medium">Page {pageNumber}</span>
-                              <span className="font-mono text-[0.68rem] uppercase tracking-[0.28em] text-stone-500">
+                              <span className="font-mono text-[0.68rem] uppercase tracking-[0.28em] text-muted-foreground">
                                 {isActive ? "Current" : "Navigate"}
                               </span>
                             </span>
@@ -676,7 +676,7 @@ function ReaderPage() {
               </aside>
             ) : null}
 
-            <div className="min-h-0 bg-[#1b1717]">
+            <div className="min-h-0 bg-[#dbe6f7]">
               <div className="relative h-full min-h-0">
                 <div className="viewerContainer absolute inset-0 overflow-auto" ref={containerRef}>
                   <div className="pdfViewer" ref={viewerRef} />

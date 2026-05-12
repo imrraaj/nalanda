@@ -17,13 +17,12 @@ export function AuthShell({
 }: AuthShellProps) {
   return (
     <div className="flex min-h-screen">
-      {/* Left form panel */}
-      <div className="flex w-full flex-col bg-background px-8 py-10 sm:px-12 lg:w-120 lg:flex-none lg:px-14">
-        <div className="mb-14">
+      <div className="flex w-full flex-col bg-background px-5 py-8 sm:px-8 lg:px-12 xl:w-120 xl:flex-none xl:px-14">
+        <div className="mb-12 sm:mb-14">
           <BrandMark />
         </div>
 
-        <div className="flex-1">
+        <div className="w-full max-w-md flex-1">
           <h1 className="font-heading text-[1.85rem] font-normal leading-tight tracking-tight text-foreground">
             {title}
           </h1>
@@ -35,12 +34,11 @@ export function AuthShell({
         </div>
 
         {footer ? (
-          <div className="mt-10 text-center text-sm text-muted-foreground">{footer}</div>
+          <div className="mt-10 w-full max-w-md text-center text-sm text-muted-foreground">{footer}</div>
         ) : null}
       </div>
 
-      {/* Right scenic gradient panel */}
-      <div className="auth-scene relative hidden flex-1 lg:block" />
+      <div className="auth-scene relative hidden flex-1 xl:block" />
     </div>
   );
 }
