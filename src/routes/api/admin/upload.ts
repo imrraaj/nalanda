@@ -39,6 +39,33 @@ export const Route = createFileRoute("/api/admin/upload")({
           return accumulator;
         }, []);
         const pathValues = formData.getAll("paths");
+        const thumbnailFiles = formData.getAll("thumbnailFiles").reduce<File[]>(
+          (accumulator, value) => {
+            if (
+              typeof value === "object" &&
+              value !== null &&
+              "name" in value &&
+              typeof value.name === "string"
+            ) {
+              accumulator.push(value as unknown as File);
+            }
+
+            return accumulator;
+          },
+          [],
+        );
+        const thumbnailIndexes = formData
+          .getAll("thumbnailIndexes")
+          .map((value) => (typeof value === "string" ? Number.parseInt(value, 10) : NaN));
+        const thumbnailByFileIndex = new Map<number, File>();
+
+        thumbnailFiles.forEach((thumbnailFile, index) => {
+          const fileIndex = thumbnailIndexes[index];
+
+          if (typeof fileIndex === "number" && Number.isInteger(fileIndex) && fileIndex >= 0) {
+            thumbnailByFileIndex.set(fileIndex, thumbnailFile);
+          }
+        });
         const uploadFiles =
           files.length > 0
             ? files
@@ -59,6 +86,7 @@ export const Route = createFileRoute("/api/admin/upload")({
                 typeof pathValues[index] === "string"
                   ? String(pathValues[index])
                   : entry.name,
+              thumbnailFile: thumbnailByFileIndex.get(index) ?? null,
             })),
             parentId,
             uploadedBy: session.user.id,

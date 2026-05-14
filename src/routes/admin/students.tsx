@@ -6,6 +6,7 @@ import {
   IconCircleCheck,
   IconKey,
   IconSearch,
+  IconTrash,
   IconX,
 } from "@tabler/icons-react";
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
@@ -322,6 +323,23 @@ function AdminStudentsPage() {
     }
   }
 
+  async function handleDeleteUserAccount(user: AdminUser) {
+    try {
+      await postAdmin(
+        {
+          action: "delete-user",
+          id: user.id,
+        },
+        { onSuccess: refreshUsers },
+      );
+      toast.success("Student deleted", `${user.name}'s account has been deleted.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Delete account failed.";
+      setErrorMessage(message);
+      toast.error("Delete account failed", message);
+    }
+  }
+
   function renderUserStatus(user: AdminUser) {
     if (isPendingApprovalUser(user)) {
       return <Badge variant="secondary">Pending approval</Badge>;
@@ -503,7 +521,16 @@ function AdminStudentsPage() {
                               <IconCircleCheck className="size-4" />
                             </ActionIconButton>
                           )}
-                          {!pending ? (
+                          {!pending && user.banned ? (
+                            <ActionIconButton
+                              disabled={isBusy}
+                              label="Delete account"
+                              onClick={() => void handleDeleteUserAccount(user)}
+                              variant="destructive"
+                            >
+                              <IconTrash className="size-4" />
+                            </ActionIconButton>
+                          ) : !pending ? (
                             <ActionIconButton
                               disabled={isBusy}
                               label="Forgot password"

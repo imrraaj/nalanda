@@ -29,6 +29,9 @@ export const libraryItem = pgTable(
     storageKey: text("storage_key"),
     contentType: text("content_type"),
     size: integer("size"),
+    thumbnailStorageKey: text("thumbnail_storage_key"),
+    thumbnailContentType: text("thumbnail_content_type"),
+    thumbnailSize: integer("thumbnail_size"),
     createdBy: text("created_by")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),

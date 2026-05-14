@@ -20,6 +20,7 @@ import { Route as ApiLibraryRouteImport } from './routes/api/library'
 import { Route as ApiAdminRouteImport } from './routes/api/admin'
 import { Route as AdminStudentsRouteImport } from './routes/admin/students'
 import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
+import { Route as ApiDocumentsThumbnailRouteImport } from './routes/api/documents/thumbnail'
 import { Route as ApiDocumentsContentRouteImport } from './routes/api/documents/content'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAdminUploadRouteImport } from './routes/api/admin/upload'
@@ -79,6 +80,11 @@ const AdminDashboardRoute = AdminDashboardRouteImport.update({
   path: '/admin/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDocumentsThumbnailRoute = ApiDocumentsThumbnailRouteImport.update({
+  id: '/api/documents/thumbnail',
+  path: '/api/documents/thumbnail',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiDocumentsContentRoute = ApiDocumentsContentRouteImport.update({
   id: '/api/documents/content',
   path: '/api/documents/content',
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/upload': typeof ApiAdminUploadRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/documents/content': typeof ApiDocumentsContentRoute
+  '/api/documents/thumbnail': typeof ApiDocumentsThumbnailRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/api/admin/upload': typeof ApiAdminUploadRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/documents/content': typeof ApiDocumentsContentRoute
+  '/api/documents/thumbnail': typeof ApiDocumentsThumbnailRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -143,6 +151,7 @@ export interface FileRoutesById {
   '/api/admin/upload': typeof ApiAdminUploadRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/documents/content': typeof ApiDocumentsContentRoute
+  '/api/documents/thumbnail': typeof ApiDocumentsThumbnailRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/api/admin/upload'
     | '/api/auth/$'
     | '/api/documents/content'
+    | '/api/documents/thumbnail'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/api/admin/upload'
     | '/api/auth/$'
     | '/api/documents/content'
+    | '/api/documents/thumbnail'
   id:
     | '__root__'
     | '/'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/api/admin/upload'
     | '/api/auth/$'
     | '/api/documents/content'
+    | '/api/documents/thumbnail'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -209,6 +221,7 @@ export interface RootRouteChildren {
   ApiUploadsRoute: typeof ApiUploadsRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiDocumentsContentRoute: typeof ApiDocumentsContentRoute
+  ApiDocumentsThumbnailRoute: typeof ApiDocumentsThumbnailRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -290,6 +303,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/documents/thumbnail': {
+      id: '/api/documents/thumbnail'
+      path: '/api/documents/thumbnail'
+      fullPath: '/api/documents/thumbnail'
+      preLoaderRoute: typeof ApiDocumentsThumbnailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/documents/content': {
       id: '/api/documents/content'
       path: '/api/documents/content'
@@ -340,6 +360,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiUploadsRoute: ApiUploadsRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiDocumentsContentRoute: ApiDocumentsContentRoute,
+  ApiDocumentsThumbnailRoute: ApiDocumentsThumbnailRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

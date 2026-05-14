@@ -2,6 +2,7 @@ export const config = {
     accessKeyId: process.env.S3_ACCESS_KEY_ID,
     secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
     endpoint: process.env.S3_ENDPOINT,
+    publicBaseUrl: process.env.S3_PUBLIC_BASE_URL,
     bucketName: "nalanda-documents",
     rootPrefix: "nalanda_documents",
     region: "us-east-1",

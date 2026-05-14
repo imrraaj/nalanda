@@ -103,13 +103,21 @@ export const Route = createFileRoute("/api/admin")({
           return json({ ok: true });
         }
 
-        if (action === "reject-user") {
+        if (action === "reject-user" || action === "delete-user") {
           const { id } = body as { id?: string };
           if (!id) return json({ error: "id is required" }, 400);
-          await auth.api.banUser({
-            body: { userId: id, banReason: "Access request rejected by admin" },
-            headers: request.headers,
-          });
+          const { user } = await import("@/db/schema");
+          const [student] = await db.select().from(user).where(eq(user.id, id));
+
+          if (!student) {
+            return json({ ok: true });
+          }
+
+          if (student.role === "admin") {
+            return json({ error: "Admin users cannot be deleted." }, 400);
+          }
+
+          await db.delete(user).where(eq(user.id, id));
           return json({ ok: true });
         }
 

@@ -223,6 +223,22 @@ class S3Storage {
     });
   }
 
+  getPublicReadUrl(key: string) {
+    this.assertManagedKey(key);
+
+    if (!config.publicBaseUrl) {
+      return null;
+    }
+
+    const baseUrl = config.publicBaseUrl.replace(/\/+$/, "");
+    const encodedKey = key
+      .split("/")
+      .map((part) => encodeURIComponent(part))
+      .join("/");
+
+    return `${baseUrl}/${encodedKey}`;
+  }
+
   async getDocumentContent(key: string) {
     this.assertManagedKey(key);
 

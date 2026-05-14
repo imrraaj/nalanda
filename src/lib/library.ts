@@ -15,6 +15,7 @@ export type LibraryItemSummary = {
   parentId: string | null;
   size: number | null;
   status: LibraryItemStatus;
+  thumbnailUrl: string | null;
   updatedAt: string;
 };
 

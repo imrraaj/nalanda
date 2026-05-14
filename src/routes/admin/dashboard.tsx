@@ -110,6 +110,76 @@ type ItemAction = {
   separatorBefore?: boolean;
 };
 
+function isPdfUploadFile(file: File) {
+  return file.type.toLowerCase() === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+}
+
+async function createPdfThumbnailFile(file: File) {
+  try {
+    const [pdfjsLib, workerModule] = await Promise.all([
+      import("pdfjs-dist/build/pdf.mjs"),
+      import("pdfjs-dist/build/pdf.worker.min.mjs?url"),
+    ]);
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default;
+
+    const loadingTask = pdfjsLib.getDocument({
+      data: new Uint8Array(await file.arrayBuffer()),
+      disableAutoFetch: true,
+      disableRange: true,
+      enableXfa: false,
+    });
+    const pdfDocument = await loadingTask.promise;
+
+    try {
+      const page = await pdfDocument.getPage(1);
+      const viewport = page.getViewport({ scale: 1 });
+      const maxWidth = 720;
+      const maxHeight = 540;
+      const scale = Math.max(maxWidth / viewport.width, maxHeight / viewport.height);
+      const scaledViewport = page.getViewport({ scale });
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+
+      if (!context) {
+        return null;
+      }
+
+      canvas.width = maxWidth;
+      canvas.height = maxHeight;
+
+      const offsetX = Math.floor((maxWidth - scaledViewport.width) / 2);
+      const offsetY = Math.max(0, Math.floor((maxHeight - scaledViewport.height) / 2));
+
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      const renderTask = page.render({
+        canvas,
+        canvasContext: context,
+        transform: [1, 0, 0, 1, offsetX, offsetY],
+        viewport: scaledViewport,
+      });
+
+      await renderTask.promise;
+      page.cleanup?.();
+
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob(resolve, "image/png");
+      });
+
+      return blob
+        ? new File([blob], `${file.name}.thumbnail.png`, { type: "image/png" })
+        : null;
+    } finally {
+      await pdfDocument.destroy?.();
+      await loadingTask.destroy?.();
+    }
+  } catch {
+    return null;
+  }
+}
+
 function isPendingApprovalUser(user: AdminUser) {
   if (!user.banned) {
     return false;
@@ -604,6 +674,16 @@ function AdminDashboardPage() {
 
     try {
       const formData = new FormData();
+      const thumbnailEntries = await Promise.all(
+        files.map(async (file, index) => {
+          if (!isPdfUploadFile(file)) {
+            return null;
+          }
+
+          const thumbnailFile = await createPdfThumbnailFile(file);
+          return thumbnailFile ? { index, thumbnailFile } : null;
+        }),
+      );
 
       for (const file of files) {
         formData.append("files", file);
@@ -613,6 +693,15 @@ function AdminDashboardPage() {
             ? (file as FileInputWithRelativePath).webkitRelativePath || file.name
             : file.name,
         );
+      }
+
+      for (const entry of thumbnailEntries) {
+        if (!entry) {
+          continue;
+        }
+
+        formData.append("thumbnailFiles", entry.thumbnailFile);
+        formData.append("thumbnailIndexes", String(entry.index));
       }
 
       if (selectedFolderId) {
@@ -836,6 +925,28 @@ function AdminDashboardPage() {
       );
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Password reset failed.");
+    }
+  }
+
+  async function handleDeleteUserAccount(user: AdminUser) {
+    try {
+      await postAdmin(
+        {
+          action: "delete-user",
+          id: user.id,
+        },
+        {
+          onSuccess: async () => {
+            await refreshUsers();
+            setNotice({
+              message: `${user.name}'s account has been deleted.`,
+              variant: "default",
+            });
+          },
+        },
+      );
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Delete account failed.");
     }
   }
 
@@ -1294,7 +1405,18 @@ function AdminDashboardPage() {
                                 Unban
                               </Button>
                             )}
-                            {!pending ? (
+                            {!pending && user.banned ? (
+                              <Button
+                                disabled={isBusy}
+                                onClick={() => void handleDeleteUserAccount(user)}
+                                size="sm"
+                                type="button"
+                                variant="destructive"
+                              >
+                                <IconTrash className="size-4" />
+                                Delete account
+                              </Button>
+                            ) : !pending ? (
                               <Button
                                 disabled={isBusy}
                                 onClick={() => void handleResetUserPassword(user)}

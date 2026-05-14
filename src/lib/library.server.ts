@@ -20,6 +20,7 @@ type SessionLike = {
 type LibraryItemRow = Pick<
   typeof libraryItem.$inferSelect,
   "contentType" | "createdAt" | "id" | "kind" | "name" | "parentId" | "size" | "status" | "updatedAt"
+  | "thumbnailContentType" | "thumbnailSize" | "thumbnailStorageKey"
 >;
 
 const libraryItemSummarySelection = {
@@ -31,6 +32,9 @@ const libraryItemSummarySelection = {
   parentId: libraryItem.parentId,
   size: libraryItem.size,
   status: libraryItem.status,
+  thumbnailContentType: libraryItem.thumbnailContentType,
+  thumbnailSize: libraryItem.thumbnailSize,
+  thumbnailStorageKey: libraryItem.thumbnailStorageKey,
   updatedAt: libraryItem.updatedAt,
 } as const;
 
@@ -61,6 +65,11 @@ function serializeLibraryItem(row: LibraryItemRow): LibraryItemSummary {
     parentId: row.parentId ?? null,
     size: row.size ?? null,
     status: row.status,
+    thumbnailUrl:
+      row.kind === "pdf" && row.thumbnailStorageKey
+        ? documentStorage.getPublicReadUrl(row.thumbnailStorageKey) ??
+          `/api/documents/thumbnail?itemId=${encodeURIComponent(row.id)}`
+        : null,
     updatedAt: toIsoString(row.updatedAt),
   };
 }
@@ -311,7 +320,12 @@ export async function deleteLibraryItemTree(input: { itemId: string }) {
   );
 
   await Promise.all(
-    fileItems.map((current) => documentStorage.deleteDocument(current.storageKey as string)),
+    fileItems.flatMap((current) => [
+      documentStorage.deleteDocument(current.storageKey as string),
+      ...(current.thumbnailStorageKey
+        ? [documentStorage.deleteDocument(current.thumbnailStorageKey)]
+        : []),
+    ]),
   );
 
   await db.delete(libraryItem).where(eq(libraryItem.id, item.id));
@@ -321,6 +335,7 @@ export async function uploadLibraryFile(input: {
   file: File;
   name?: string;
   parentId: string | null;
+  thumbnailFile?: File | null;
   uploadedBy: string;
 }) {
   const name = ensureLibraryName(input.name ?? input.file.name);
@@ -341,6 +356,14 @@ export async function uploadLibraryFile(input: {
     nameOverride: name,
     uploadedBy: input.uploadedBy,
   });
+  const thumbnailStored =
+    kind === "pdf" && input.thumbnailFile
+      ? await documentStorage.uploadDocument({
+          file: input.thumbnailFile,
+          nameOverride: `${name}.thumbnail.png`,
+          uploadedBy: input.uploadedBy,
+        })
+      : null;
 
   try {
     const [created] = await db
@@ -354,6 +377,9 @@ export async function uploadLibraryFile(input: {
         size: stored.size,
         status: "approved",
         storageKey: stored.key,
+        thumbnailContentType: thumbnailStored?.contentType ?? null,
+        thumbnailSize: thumbnailStored?.size ?? null,
+        thumbnailStorageKey: thumbnailStored?.key ?? null,
         updatedBy: input.uploadedBy,
       })
       .returning();
@@ -365,6 +391,9 @@ export async function uploadLibraryFile(input: {
     return serializeLibraryItem(created);
   } catch (error) {
     await documentStorage.deleteDocument(stored.key);
+    if (thumbnailStored) {
+      await documentStorage.deleteDocument(thumbnailStored.key);
+    }
     throw error;
   }
 }
@@ -415,6 +444,7 @@ export async function uploadLibraryEntries(input: {
   entries: Array<{
     file: File;
     relativePath?: string | null;
+    thumbnailFile?: File | null;
   }>;
   parentId: string | null;
   uploadedBy: string;
@@ -438,6 +468,7 @@ export async function uploadLibraryEntries(input: {
       file: entry.file,
       name: fileName,
       parentId: targetParentId,
+      thumbnailFile: entry.thumbnailFile ?? null,
       uploadedBy: input.uploadedBy,
     });
 
@@ -462,6 +493,41 @@ export async function getReadableLibraryItemForSession(input: {
   }
 
   return item;
+}
+
+export async function getReadableLibraryThumbnailForSession(input: {
+  itemId: string;
+  session: SessionLike;
+}) {
+  const item = await findLibraryItemById(input.itemId);
+
+  if (!item || item.kind !== "pdf" || !item.thumbnailStorageKey) {
+    throw new Error("Thumbnail not found.");
+  }
+
+  if (!isAdminSession(input.session) && item.status !== "approved") {
+    throw new Error("Thumbnail not found.");
+  }
+
+  return {
+    contentType: item.thumbnailContentType ?? "image/png",
+    key: item.thumbnailStorageKey,
+    name: `${item.name}.thumbnail.png`,
+  };
+}
+
+export async function getPublicLibraryThumbnail(input: { itemId: string }) {
+  const item = await findLibraryItemById(input.itemId);
+
+  if (!item || item.kind !== "pdf" || !item.thumbnailStorageKey) {
+    throw new Error("Thumbnail not found.");
+  }
+
+  return {
+    contentType: item.thumbnailContentType ?? "image/png",
+    key: item.thumbnailStorageKey,
+    name: `${item.name}.thumbnail.png`,
+  };
 }
 
 export async function listAdminUsers() {

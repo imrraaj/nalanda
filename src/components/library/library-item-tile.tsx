@@ -58,7 +58,7 @@ export function LibraryItemTile({
         {item.kind === "pdf" ? (
           <PdfThumbnail
             className="absolute inset-0 z-10"
-            itemId={item.id}
+            thumbnailUrl={item.thumbnailUrl}
             title={item.name}
           />
         ) : null}
