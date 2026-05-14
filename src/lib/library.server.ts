@@ -17,7 +17,10 @@ type SessionLike = {
   };
 };
 
-type LibraryItemRow = typeof libraryItem.$inferSelect;
+type LibraryItemRow = Pick<
+  typeof libraryItem.$inferSelect,
+  "contentType" | "createdAt" | "id" | "kind" | "name" | "parentId" | "size" | "status" | "updatedAt"
+>;
 
 const libraryItemSummarySelection = {
   contentType: libraryItem.contentType,
@@ -488,10 +491,11 @@ export async function listAdminUsersPage(input: {
   }
 
   const whereClause = and(...conditions);
-  const [{ count }] = await db
+  const [countRow] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(user)
     .where(whereClause);
+  const count = countRow?.count ?? 0;
   const totalUsers = Number(count) || 0;
   const totalPages = Math.max(1, Math.ceil(totalUsers / pageSize));
   const page = Math.min(Math.max(1, input.page), totalPages);

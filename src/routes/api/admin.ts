@@ -5,6 +5,8 @@ function json(body: unknown, status = 200) {
   return Response.json(body, { status });
 }
 
+const studentTemporaryPassword = "Student@123";
+
 async function requireAdmin(request: Request) {
   const { getSessionFromHeaders } = await import("@/lib/auth.server");
   const session = await getSessionFromHeaders(request.headers);
@@ -109,6 +111,19 @@ export const Route = createFileRoute("/api/admin")({
             headers: request.headers,
           });
           return json({ ok: true });
+        }
+
+        if (action === "reset-user-password") {
+          const { id } = body as { id?: string };
+          if (!id) return json({ error: "id is required" }, 400);
+          await auth.api.setUserPassword({
+            body: {
+              newPassword: studentTemporaryPassword,
+              userId: id,
+            },
+            headers: request.headers,
+          });
+          return json({ ok: true, temporaryPassword: studentTemporaryPassword });
         }
 
         if (action === "approve-document" || action === "reject-document") {

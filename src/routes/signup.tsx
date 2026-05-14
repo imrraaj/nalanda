@@ -5,6 +5,7 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/sonner";
 import { signUpWithEmail } from "@/lib/auth.actions";
 
 export const Route = createFileRoute("/signup")({
@@ -13,7 +14,10 @@ export const Route = createFileRoute("/signup")({
     const session = await getSession();
 
     if (session) {
-      throw redirect({ to: "/dashboard" });
+      throw redirect({
+        search: { folderId: undefined, openId: undefined, q: undefined },
+        to: "/dashboard",
+      });
     }
   },
   component: SignUpPage,
@@ -40,13 +44,18 @@ function SignUpPage() {
       });
 
       if (result?.error) {
-        setErrorMessage(result.error.message ?? "Sign up failed.");
+        const message = result.error.message ?? "Sign up failed.";
+        setErrorMessage(message);
+        toast.error("Sign up failed", message);
         return;
       }
 
       setSuccess(true);
+      toast.success("Account created", "Your account is pending admin approval.");
     } catch {
-      setErrorMessage("Sign up unavailable. Try again shortly.");
+      const message = "Sign up unavailable. Try again shortly.";
+      setErrorMessage(message);
+      toast.error("Sign up failed", message);
     } finally {
       setIsSubmitting(false);
     }
@@ -59,7 +68,7 @@ function SignUpPage() {
         description="Your account is pending admin approval. You'll be able to sign in once approved."
         footer={
           <p>
-            <Link to="/login" className="text-primary hover:underline">Back to sign in</Link>
+            <Link to="/login" search={{ redirectTo: undefined }} className="text-primary hover:underline">Back to sign in</Link>
           </p>
         }
       >
@@ -77,7 +86,7 @@ function SignUpPage() {
       footer={
         <p>
           Already have an account?{" "}
-          <Link to="/login" className="text-primary hover:underline">Sign in</Link>
+          <Link to="/login" search={{ redirectTo: undefined }} className="text-primary hover:underline">Sign in</Link>
         </p>
       }
     >

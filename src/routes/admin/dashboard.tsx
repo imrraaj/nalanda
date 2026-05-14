@@ -8,17 +8,19 @@ import {
   IconFolderOpen,
   IconFolderPlus,
   IconInfoCircle,
+  IconKey,
   IconPlus,
   IconSearch,
   IconTrash,
   IconUpload,
 } from "@tabler/icons-react";
-import { createFileRoute, redirect, useNavigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useNavigate, useRouter } from "@tanstack/react-router";
 import { type ReactNode, startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 import { BrandMark } from "@/components/brand-mark";
 import { LibraryInfoPanel } from "@/components/library/library-info-panel";
 import { LibraryItemTile } from "@/components/library/library-item-tile";
+import { ProfileMenu } from "@/components/profile-menu";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -56,7 +58,7 @@ import {
   searchLibraryItems,
   type LibraryItemSummary,
 } from "@/lib/library";
-import { formatDateTime, getInitials } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 import { loadAdminUsersPage } from "@/routes/admin/-dashboard.function";
 
 type AdminUser = {
@@ -93,6 +95,11 @@ type UploadProgressState = {
   fileCount: number;
   percent: number;
 };
+
+type AdminNoticeState = {
+  message: string;
+  variant: "default" | "destructive";
+} | null;
 
 type ItemAction = {
   destructive?: boolean;
@@ -147,24 +154,8 @@ function normalizeAdminSearchState(next: {
 }
 
 export const Route = createFileRoute("/admin/dashboard")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    folderId:
-      typeof search.folderId === "string" && search.folderId.trim()
-        ? search.folderId
-        : undefined,
-    openId:
-      typeof search.openId === "string" && search.openId.trim()
-        ? search.openId
-        : undefined,
-    q:
-      typeof search.q === "string" && search.q.trim()
-        ? search.q
-        : undefined,
-    tab:
-      search.tab === "users" || search.tab === "library"
-        ? search.tab
-        : undefined,
-    userPage: (() => {
+  validateSearch: (search: Record<string, unknown>) => {
+    const userPage = (() => {
       const value =
         typeof search.userPage === "number"
           ? search.userPage
@@ -173,13 +164,28 @@ export const Route = createFileRoute("/admin/dashboard")({
             : NaN;
 
       return Number.isFinite(value) && value > 1 ? value : undefined;
-    })(),
-    userQ:
-      typeof search.userQ === "string" && search.userQ.trim()
-        ? search.userQ
-        : undefined,
-  }),
-  beforeLoad: async () => {
+    })();
+
+    return normalizeAdminSearchState({
+      folderId: typeof search.folderId === "string" ? search.folderId : undefined,
+      openId: typeof search.openId === "string" ? search.openId : undefined,
+      q: typeof search.q === "string" ? search.q : undefined,
+      tab: search.tab === "users" || search.tab === "library" ? search.tab : undefined,
+      userPage,
+      userQ: typeof search.userQ === "string" ? search.userQ : undefined,
+    });
+  },
+  beforeLoad: async ({ search }) => {
+    if ((search as { tab?: string }).tab === "users") {
+      throw redirect({
+        search: {
+          page: (search as { userPage?: number }).userPage,
+          q: (search as { userQ?: string }).userQ,
+        },
+        to: "/admin/students",
+      });
+    }
+
     const { getSession } = await import("@/lib/auth.function");
     const session = await getSession();
 
@@ -191,7 +197,10 @@ export const Route = createFileRoute("/admin/dashboard")({
     }
 
     if ((session.user as { role?: string }).role !== "admin") {
-      throw redirect({ to: "/dashboard" });
+      throw redirect({
+        search: { folderId: undefined, openId: undefined, q: undefined },
+        to: "/dashboard",
+      });
     }
   },
   loader: async () => {
@@ -209,7 +218,10 @@ export const Route = createFileRoute("/admin/dashboard")({
     }
 
     if ((session.user as { role?: string }).role !== "admin") {
-      throw redirect({ to: "/dashboard" });
+      throw redirect({
+        search: { folderId: undefined, openId: undefined, q: undefined },
+        to: "/dashboard",
+      });
     }
 
     return {
@@ -225,10 +237,11 @@ export const Route = createFileRoute("/admin/dashboard")({
 function AdminDashboardPage() {
   const navigate = useNavigate();
   const router = useRouter();
-  const { folderId, openId, q, tab, userPage, userQ } = Route.useSearch();
+  const { folderId, openId, q } = Route.useSearch();
   const { items, viewer } = Route.useLoaderData();
-  const activeTab = tab ?? "library";
-  const currentUserPage = userPage ?? 1;
+  const activeTab = "library" as AdminTab;
+  const currentUserPage = 1;
+  const userQ = undefined;
   const selectedFolderId = folderId ?? null;
   const [dialog, setDialog] = useState<AdminDialogState>(null);
   const [draftName, setDraftName] = useState("");
@@ -236,6 +249,7 @@ function AdminDashboardPage() {
   const [isBusy, setIsBusy] = useState(false);
   const [isUsersLoading, setIsUsersLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [notice, setNotice] = useState<AdminNoticeState>(null);
   const [searchInput, setSearchInput] = useState(q ?? "");
   const [userSearchInput, setUserSearchInput] = useState(userQ ?? "");
   const [usersPage, setUsersPage] = useState<AdminUsersPage | null>(null);
@@ -502,6 +516,7 @@ function AdminDashboardPage() {
     });
     setDialog(null);
     setErrorMessage(null);
+    setNotice(null);
   }
 
   function openFolder(folderIdToOpen: string | null, options?: { clearQuery?: boolean }) {
@@ -554,7 +569,7 @@ function AdminDashboardPage() {
 
   async function postAdmin(
     body: Record<string, unknown>,
-    options?: { onSuccess?: () => Promise<void> | void },
+    options?: { onSuccess?: (payload: unknown) => Promise<void> | void },
   ) {
     setIsBusy(true);
     setErrorMessage(null);
@@ -570,7 +585,9 @@ function AdminDashboardPage() {
         throw new Error(await parseError(response));
       }
 
-      await options?.onSuccess?.();
+      const payload = await response.json().catch(() => null);
+
+      await options?.onSuccess?.(payload);
     } finally {
       setIsBusy(false);
     }
@@ -792,6 +809,36 @@ function AdminDashboardPage() {
     }
   }
 
+  async function handleResetUserPassword(user: AdminUser) {
+    try {
+      await postAdmin(
+        {
+          action: "reset-user-password",
+          id: user.id,
+        },
+        {
+          onSuccess: async (payload) => {
+            await refreshUsers();
+            const temporaryPassword =
+              payload &&
+              typeof payload === "object" &&
+              "temporaryPassword" in payload &&
+              typeof payload.temporaryPassword === "string"
+                ? payload.temporaryPassword
+                : "Student@123";
+
+            setNotice({
+              message: `${user.name}'s password was reset to ${temporaryPassword}. Ask the student to change it from Password settings after signing in.`,
+              variant: "default",
+            });
+          },
+        },
+      );
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Password reset failed.");
+    }
+  }
+
   function getItemActions(item: LibraryItemSummary): ItemAction[] {
     return [
       {
@@ -901,7 +948,8 @@ function AdminDashboardPage() {
       return <Badge variant="destructive">Disabled</Badge>;
     }
 
-    return <Badge variant="secondary">Active</Badge>;
+    // return <Badge variant="secondary">Active</Badge>;
+    return null;
   }
 
   return (
@@ -912,26 +960,33 @@ function AdminDashboardPage() {
             <BrandMark className="max-w-[11rem] sm:max-w-none" />
             <Separator className="hidden h-5! sm:block" orientation="vertical" />
             <nav className="flex items-center gap-1">
-              <button
+              <Link
                 className={buttonVariants({
                   size: "sm",
-                  variant: activeTab === "library" ? "secondary" : "ghost",
+                  variant: "secondary",
                 })}
-                onClick={() => setActiveTab("library")}
-                type="button"
+                search={{
+                  folderId: undefined,
+                  openId: undefined,
+                  q: undefined,
+                  tab: undefined,
+                  userPage: undefined,
+                  userQ: undefined,
+                }}
+                to="/admin/dashboard"
               >
                 Library
-              </button>
-              <button
+              </Link>
+              <Link
                 className={buttonVariants({
                   size: "sm",
-                  variant: activeTab === "users" ? "secondary" : "ghost",
+                  variant: "ghost",
                 })}
-                onClick={() => setActiveTab("users")}
-                type="button"
+                search={{ page: undefined, q: undefined }}
+                to="/admin/students"
               >
                 Students
-              </button>
+              </Link>
             </nav>
           </div>
 
@@ -970,12 +1025,7 @@ function AdminDashboardPage() {
               </DropdownMenu>
             ) : null}
 
-            <div className="flex size-8 items-center justify-center rounded-[4px] bg-primary/10 text-xs font-semibold text-primary">
-              {getInitials(viewer.name)}
-            </div>
-            <Button onClick={handleSignOut} size="sm" variant="ghost">
-              Sign out
-            </Button>
+            <ProfileMenu name={viewer.name} onSignOut={handleSignOut} />
           </div>
         </div>
       </header>
@@ -1119,6 +1169,12 @@ function AdminDashboardPage() {
           </Alert>
         ) : null}
 
+        {notice ? (
+          <Alert variant={notice.variant}>
+            <AlertDescription>{notice.message}</AlertDescription>
+          </Alert>
+        ) : null}
+
         {activeTab === "library" ? (
           visibleItems.length === 0 ? (
             <Card className="border-dashed p-10 text-center text-sm text-muted-foreground">
@@ -1238,6 +1294,18 @@ function AdminDashboardPage() {
                                 Unban
                               </Button>
                             )}
+                            {!pending ? (
+                              <Button
+                                disabled={isBusy}
+                                onClick={() => void handleResetUserPassword(user)}
+                                size="sm"
+                                type="button"
+                                variant="outline"
+                              >
+                                <IconKey className="size-4" />
+                                Forgot password
+                              </Button>
+                            ) : null}
                           </div>
                         </div>
                       );

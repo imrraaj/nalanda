@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { Component, type ErrorInfo, type ReactNode } from "react";
+import { Component, type ErrorInfo, type ReactNode, useEffect, useState } from "react";
 import {
   Link,
   Outlet,
@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-router";
 
 import appCss from "@/styles/index.css?url";
+import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -100,13 +101,18 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
+  const [hasHydrated, setHasHydrated] = useState(false);
   const isNavigating = useRouterState({
     select: (state) =>
       state.status === "pending" || state.isLoading || state.isTransitioning,
   });
 
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
+
   return (
-    <RootDocument isNavigating={isNavigating}>
+    <RootDocument isNavigating={hasHydrated && isNavigating}>
       <ErrorBoundary>
         <Outlet />
       </ErrorBoundary>
@@ -126,7 +132,7 @@ function RootDocument({
       <body className="min-h-screen bg-background text-foreground antialiased">
         <div
           aria-hidden={!isNavigating}
-          className="pointer-events-none fixed inset-x-0 top-0 z-[100] h-0.5 overflow-hidden"
+          className="pointer-events-none fixed inset-x-0 top-0 z-100 h-0.5 overflow-hidden"
         >
           <div
             className={`h-full bg-primary transition-all duration-150 ${
@@ -135,6 +141,7 @@ function RootDocument({
           />
         </div>
         {children}
+        <Toaster />
         <Scripts />
       </body>
     </html>
@@ -155,14 +162,14 @@ function NotFoundPage() {
       </div>
       <div className="flex items-center gap-2">
         <button
-          className="rounded-[4px] border border-border bg-card px-4 py-2 text-sm text-foreground transition-colors hover:bg-accent"
+          className="rounded-lg border border-border bg-card px-4 py-2 text-sm text-foreground transition-colors hover:bg-accent"
           onClick={() => window.history.back()}
           type="button"
         >
           Go back
         </button>
         <Link
-          className="rounded-[4px] bg-primary px-4 py-2 text-sm text-primary-foreground transition-opacity hover:opacity-90"
+          className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground transition-opacity hover:opacity-90"
           to="/"
         >
           Go home

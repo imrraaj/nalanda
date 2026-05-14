@@ -52,7 +52,6 @@ type ViewerRuntime = {
     increaseScale: () => void;
     nextPage: () => boolean;
     previousPage: () => boolean;
-    setDocument: (document: unknown) => void;
   };
   loadingTask: {
     destroy?: () => Promise<void> | void;
@@ -104,7 +103,10 @@ export const Route = createFileRoute("/reader")({
     }
 
     if (!search.itemId) {
-      throw redirect({ to: "/dashboard" });
+      throw redirect({
+        search: { folderId: undefined, openId: undefined, q: undefined },
+        to: "/dashboard",
+      });
     }
   },
   component: ReaderPage,
@@ -115,6 +117,7 @@ function ReaderPage() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<HTMLDivElement | null>(null);
   const runtimeRef = useRef<ViewerRuntime | null>(null);
+  const lastWheelZoomAtRef = useRef(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageCount, setPageCount] = useState(0);
   const [pageInput, setPageInput] = useState("1");
@@ -158,7 +161,7 @@ function ReaderPage() {
         const pdfjsLib = await import("pdfjs-dist/build/pdf.mjs");
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
-        globalThis.pdfjsLib = pdfjsLib;
+        (globalThis as typeof globalThis & { pdfjsLib?: unknown }).pdfjsLib = pdfjsLib;
 
         const pdfjsViewer = await import("pdfjs-dist/web/pdf_viewer.mjs");
 
@@ -334,6 +337,79 @@ function ReaderPage() {
     });
   }, [deferredFindQuery, pageCount]);
 
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (!event.ctrlKey && !event.metaKey) {
+        return;
+      }
+
+      const runtime = runtimeRef.current;
+
+      if (!runtime) {
+        return;
+      }
+
+      if (event.key === "+" || event.key === "=") {
+        event.preventDefault();
+        runtime.pdfViewer.increaseScale();
+        return;
+      }
+
+      if (event.key === "-" || event.key === "_") {
+        event.preventDefault();
+        runtime.pdfViewer.decreaseScale();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  useEffect(() => {
+    const container = containerRef.current;
+
+    if (!container) {
+      return;
+    }
+
+    function handleWheel(event: WheelEvent) {
+      if (!event.ctrlKey && !event.metaKey) {
+        return;
+      }
+
+      const runtime = runtimeRef.current;
+
+      if (!runtime) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const now = Date.now();
+
+      if (now - lastWheelZoomAtRef.current < 50) {
+        return;
+      }
+
+      lastWheelZoomAtRef.current = now;
+
+      if (event.deltaY < 0) {
+        runtime.pdfViewer.increaseScale();
+      } else if (event.deltaY > 0) {
+        runtime.pdfViewer.decreaseScale();
+      }
+    }
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+      container.removeEventListener("wheel", handleWheel);
+    };
+  }, []);
+
   function goToPage(nextPage: number) {
     const runtime = runtimeRef.current;
 
@@ -393,6 +469,16 @@ function ReaderPage() {
         <Card className="nalanda-pdf-shell flex h-full flex-col overflow-hidden rounded-none border-0 p-0">
           <div className="border-b border-border bg-background/95 px-3 py-3 backdrop-blur-sm sm:px-4">
             <div className="flex flex-wrap items-center gap-2">
+              <Link
+                aria-label="Back to dashboard"
+                className={cn(buttonVariants({ size: "icon-sm", variant: "outline" }))}
+                search={{ folderId: undefined, openId: undefined, q: undefined }}
+                title="Back to dashboard"
+                to="/dashboard"
+              >
+                <IconArrowLeft className="size-4" />
+              </Link>
+
               <Button
                 aria-label={isSidebarOpen ? "Hide page list" : "Show page list"}
                 onClick={() => {
@@ -539,15 +625,6 @@ function ReaderPage() {
                 >
                   <IconZoomIn className="size-4" />
                 </Button>
-
-                <Link
-                  aria-label="Back to dashboard"
-                  className={cn(buttonVariants({ size: "icon-sm", variant: "outline" }))}
-                  title="Back to dashboard"
-                  to="/dashboard"
-                >
-                  <IconArrowLeft className="size-4" />
-                </Link>
 
                 <Link
                   aria-label="Reload reader"

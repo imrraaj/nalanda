@@ -5,18 +5,25 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/sonner";
 import { signInWithEmail } from "@/lib/auth.actions";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>) => ({
-    redirectTo: typeof search.redirectTo === "string" ? search.redirectTo : "",
+    redirectTo:
+      typeof search.redirectTo === "string" && search.redirectTo
+        ? search.redirectTo
+        : undefined,
   }),
   beforeLoad: async () => {
     const { getSession } = await import("@/lib/auth.function");
     const session = await getSession();
 
     if (session) {
-      throw redirect({ to: "/dashboard" });
+      throw redirect({
+        search: { folderId: undefined, openId: undefined, q: undefined },
+        to: "/dashboard",
+      });
     }
   },
   component: LoginPage,
@@ -43,20 +50,27 @@ function LoginPage() {
       });
 
       if (result?.error) {
-        setErrorMessage(result.error.message ?? "Sign in failed.");
+        const message = result.error.message ?? "Sign in failed.";
+        setErrorMessage(message);
+        toast.error("Sign in failed", message);
         return;
       }
 
-      if (redirectTo.startsWith("/")) {
+      if (redirectTo?.startsWith("/")) {
         window.location.assign(redirectTo);
         return;
       }
 
       startTransition(() => {
-        void navigate({ to: "/dashboard" });
+        void navigate({
+          search: { folderId: undefined, openId: undefined, q: undefined },
+          to: "/dashboard",
+        });
       });
     } catch {
-      setErrorMessage("Sign in failed. Try again shortly.");
+      const message = "Sign in failed. Try again shortly.";
+      setErrorMessage(message);
+      toast.error("Sign in failed", message);
     } finally {
       setIsSubmitting(false);
     }

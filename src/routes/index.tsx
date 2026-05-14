@@ -48,12 +48,14 @@ function HomePage() {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
                 className={buttonVariants({ className: "h-11 px-6 font-semibold", size: "lg" })}
+                search={{ folderId: undefined, openId: undefined, q: undefined }}
                 to="/dashboard"
               >
                 Go to dashboard
               </Link>
               <Link
                 className={buttonVariants({ className: "h-11 px-6", size: "lg", variant: "outline" })}
+                search={{ redirectTo: undefined }}
                 to="/login"
               >
                 Student login

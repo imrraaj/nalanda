@@ -57,3 +57,16 @@ export const signOut = createClientOnlyFn(async () => {
 
   await authClient.signOut();
 });
+
+export const changePassword = createClientOnlyFn(async (input: {
+  currentPassword: string;
+  newPassword: string;
+}) => {
+  const { authClient } = await import("@/lib/auth.client");
+
+  return authClient.changePassword({
+    currentPassword: input.currentPassword,
+    newPassword: input.newPassword,
+    revokeOtherSessions: true,
+  });
+});

@@ -11,6 +11,7 @@ import { type ReactNode, startTransition, useDeferredValue, useEffect, useMemo, 
 import { BrandMark } from "@/components/brand-mark";
 import { LibraryInfoPanel } from "@/components/library/library-info-panel";
 import { LibraryItemTile } from "@/components/library/library-item-tile";
+import { ProfileMenu } from "@/components/profile-menu";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -42,7 +43,6 @@ import {
   searchLibraryItems,
   type LibraryItemSummary,
 } from "@/lib/library";
-import { getInitials } from "@/lib/utils";
 
 type DashboardDialogState =
   | { itemId: string; mode: "info" }
@@ -95,20 +95,12 @@ function buildDashboardHref(next: {
 }
 
 export const Route = createFileRoute("/dashboard")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    folderId:
-      typeof search.folderId === "string" && search.folderId.trim()
-        ? search.folderId
-        : undefined,
-    openId:
-      typeof search.openId === "string" && search.openId.trim()
-        ? search.openId
-        : undefined,
-    q:
-      typeof search.q === "string" && search.q.trim()
-        ? search.q
-        : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>) =>
+    normalizeDashboardSearchState({
+      folderId: typeof search.folderId === "string" ? search.folderId : undefined,
+      openId: typeof search.openId === "string" ? search.openId : undefined,
+      q: typeof search.q === "string" ? search.q : undefined,
+    }),
   loader: async () => {
     const [{ getSession }, { loadDashboardLibraryData }] = await Promise.all([
       import("@/lib/auth.function"),
@@ -397,20 +389,21 @@ function DashboardPage() {
             {viewer?.role === "admin" ? (
               <Link
                 className={buttonVariants({ size: "sm", variant: "outline" })}
+                search={{
+                  folderId: undefined,
+                  openId: undefined,
+                  q: undefined,
+                  tab: undefined,
+                  userPage: undefined,
+                  userQ: undefined,
+                }}
                 to="/admin/dashboard"
               >
                 Admin
               </Link>
             ) : null}
             {viewer ? (
-              <>
-                <div className="flex size-8 items-center justify-center rounded-[4px] bg-primary/10 text-xs font-semibold text-primary">
-                  {getInitials(viewer.name)}
-                </div>
-                <Button onClick={handleSignOut} size="sm" variant="ghost">
-                  Sign out
-                </Button>
-              </>
+              <ProfileMenu name={viewer.name} onSignOut={handleSignOut} />
             ) : (
               <Link className={buttonVariants({ size: "sm" })} search={{ redirectTo: "/dashboard" }} to="/login">
                 Log in

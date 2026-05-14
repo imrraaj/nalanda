@@ -9,6 +9,7 @@ import {
 } from "@tabler/icons-react";
 
 import { Card } from "@/components/ui/card";
+import { PdfThumbnail } from "@/components/library/pdf-thumbnail";
 import {
   ContextMenuRoot,
   ContextMenuTrigger,
@@ -49,12 +50,21 @@ export function LibraryItemTile({
 }: LibraryItemTileProps) {
   const content = (
     <Card
-      className="gap-0 rounded-[4px] py-0 transition-colors hover:bg-muted/20 data-[interactive=true]:cursor-pointer"
+      className="gap-0 rounded-lg py-0 transition-colors hover:bg-muted/20 data-[interactive=true]:cursor-pointer"
       data-interactive={onDoubleClick ? "true" : "false"}
       onDoubleClick={onDoubleClick}
     >
-      <div className="flex aspect-[4/3] items-center justify-center border-b border-border/70 bg-muted/35 px-4">
-        {getTileIcon(item)}
+      <div className="relative flex aspect-4/3 items-center justify-center border-b border-border/70 bg-muted/35 px-4">
+        {item.kind === "pdf" ? (
+          <PdfThumbnail
+            className="absolute inset-0 z-10"
+            itemId={item.id}
+            title={item.name}
+          />
+        ) : null}
+        <div className={item.kind === "pdf" ? "pdf-thumbnail-fallback" : undefined}>
+          {getTileIcon(item)}
+        </div>
       </div>
       <div className="flex items-start justify-between gap-3 p-3">
         <div className="min-w-0">

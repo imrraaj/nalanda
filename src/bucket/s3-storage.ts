@@ -109,7 +109,7 @@ function toWebStream(body: S3ObjectBody) {
     });
   }
 
-  return Readable.toWeb(body as Readable) as ReadableStream<Uint8Array>;
+  return Readable.toWeb(body as Readable) as unknown as ReadableStream<Uint8Array>;
 }
 
 function isBucketMissingError(error: unknown) {
