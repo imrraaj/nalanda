@@ -66,7 +66,7 @@ function serializeLibraryItem(row: LibraryItemRow): LibraryItemSummary {
     size: row.size ?? null,
     status: row.status,
     thumbnailUrl:
-      row.kind === "pdf" && row.thumbnailStorageKey
+      row.thumbnailStorageKey
         ? documentStorage.getPublicReadUrl(row.thumbnailStorageKey) ??
           `/api/documents/thumbnail?itemId=${encodeURIComponent(row.id)}`
         : null,
@@ -562,6 +562,100 @@ export async function uploadLibraryEntries(input: {
   return uploadedItems;
 }
 
+function ensureThumbnailImage(file: File) {
+  const normalizedType = file.type.toLowerCase();
+  const normalizedName = file.name.toLowerCase();
+  const validType = normalizedType === "image/jpeg" || normalizedType === "image/jpg" || normalizedType === "image/png";
+  const validExtension =
+    normalizedName.endsWith(".jpeg") ||
+    normalizedName.endsWith(".jpg") ||
+    normalizedName.endsWith(".png");
+
+  if (!validType && !validExtension) {
+    throw new Error("Thumbnail must be a JPEG or PNG image.");
+  }
+}
+
+export async function updateLibraryFolderThumbnail(input: {
+  file: File;
+  itemId: string;
+  updatedBy: string;
+}) {
+  ensureThumbnailImage(input.file);
+
+  const item = await findLibraryItemById(input.itemId);
+
+  if (!item || item.kind !== "folder") {
+    throw new Error("Folder not found.");
+  }
+
+  const stored = await documentStorage.uploadDocument({
+    file: input.file,
+    nameOverride: `${item.name}.thumbnail.${input.file.type === "image/png" ? "png" : "jpg"}`,
+    uploadedBy: input.updatedBy,
+  });
+
+  try {
+    const [updated] = await db
+      .update(libraryItem)
+      .set({
+        thumbnailContentType: stored.contentType,
+        thumbnailSize: stored.size,
+        thumbnailStorageKey: stored.key,
+        updatedAt: new Date(),
+        updatedBy: input.updatedBy,
+      })
+      .where(eq(libraryItem.id, item.id))
+      .returning();
+
+    if (!updated) {
+      throw new Error("Folder thumbnail could not be saved.");
+    }
+
+    if (item.thumbnailStorageKey) {
+      await documentStorage.deleteDocument(item.thumbnailStorageKey);
+    }
+
+    return serializeLibraryItem(updated);
+  } catch (error) {
+    await documentStorage.deleteDocument(stored.key);
+    throw error;
+  }
+}
+
+export async function removeLibraryFolderThumbnail(input: {
+  itemId: string;
+  updatedBy: string;
+}) {
+  const item = await findLibraryItemById(input.itemId);
+
+  if (!item || item.kind !== "folder") {
+    throw new Error("Folder not found.");
+  }
+
+  const [updated] = await db
+    .update(libraryItem)
+    .set({
+      thumbnailContentType: null,
+      thumbnailSize: null,
+      thumbnailStorageKey: null,
+      updatedAt: new Date(),
+      updatedBy: input.updatedBy,
+    })
+    .where(eq(libraryItem.id, item.id))
+    .returning();
+
+  if (!updated) {
+    throw new Error("Folder thumbnail could not be removed.");
+  }
+
+  if (item.thumbnailStorageKey) {
+    await documentStorage.deleteDocument(item.thumbnailStorageKey);
+  }
+
+  return serializeLibraryItem(updated);
+}
+
 export async function getReadableLibraryItemForSession(input: {
   itemId: string;
   session: SessionLike;
@@ -589,7 +683,7 @@ export async function getReadableLibraryThumbnailForSession(input: {
 }) {
   const item = await findLibraryItemById(input.itemId);
 
-  if (!item || item.kind !== "pdf" || !item.thumbnailStorageKey) {
+  if (!item || !item.thumbnailStorageKey) {
     throw new Error("Thumbnail not found.");
   }
 
@@ -607,7 +701,7 @@ export async function getReadableLibraryThumbnailForSession(input: {
 export async function getPublicLibraryThumbnail(input: { itemId: string }) {
   const item = await findLibraryItemById(input.itemId);
 
-  if (!item || item.kind !== "pdf" || !item.thumbnailStorageKey) {
+  if (!item || !item.thumbnailStorageKey) {
     throw new Error("Thumbnail not found.");
   }
 

@@ -269,6 +269,22 @@ export const Route = createFileRoute("/api/admin")({
           return json({ ok: true });
         }
 
+        if (action === "remove-folder-thumbnail") {
+          const { id } = body as { id?: string };
+
+          if (!id) {
+            return json({ error: "id is required" }, 400);
+          }
+
+          const { removeLibraryFolderThumbnail } = await import("@/lib/library.server");
+          const item = await removeLibraryFolderThumbnail({
+            itemId: id,
+            updatedBy: session.user.id,
+          });
+
+          return json({ item, ok: true });
+        }
+
         return json({ error: "Unknown action" }, 400);
       },
     },

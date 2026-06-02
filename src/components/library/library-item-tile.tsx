@@ -55,14 +55,14 @@ export function LibraryItemTile({
       onDoubleClick={onDoubleClick}
     >
       <div className="relative flex aspect-4/3 items-center justify-center border-b border-border/70 bg-muted/35 px-4">
-        {item.kind === "pdf" ? (
+        {item.thumbnailUrl ? (
           <PdfThumbnail
             className="absolute inset-0 z-10"
             thumbnailUrl={item.thumbnailUrl}
             title={item.name}
           />
         ) : null}
-        <div className={item.kind === "pdf" ? "pdf-thumbnail-fallback" : undefined}>
+        <div className={item.thumbnailUrl ? "pdf-thumbnail-fallback" : undefined}>
           {getTileIcon(item)}
         </div>
       </div>

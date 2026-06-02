@@ -9,6 +9,7 @@ import {
   IconFolderPlus,
   IconInfoCircle,
   IconKey,
+  IconPhoto,
   IconPlus,
   IconSearch,
   IconTrash,
@@ -84,7 +85,7 @@ type AdminTab = "library" | "users";
 
 type AdminDialogState =
   | { mode: "create-folder" }
-  | { itemId: string; mode: "delete" | "info" | "move" | "rename" }
+  | { itemId: string; mode: "delete" | "info" | "move" | "rename" | "thumbnail" }
   | null;
 
 type FileInputWithRelativePath = File & {
@@ -321,6 +322,7 @@ function AdminDashboardPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [notice, setNotice] = useState<AdminNoticeState>(null);
   const [searchInput, setSearchInput] = useState(q ?? "");
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [userSearchInput, setUserSearchInput] = useState(userQ ?? "");
   const [usersPage, setUsersPage] = useState<AdminUsersPage | null>(null);
   const [uploadProgress, setUploadProgress] = useState<UploadProgressState | null>(null);
@@ -794,6 +796,11 @@ function AdminDashboardPage() {
     setDialog({ itemId: item.id, mode: "move" });
   }
 
+  function openThumbnailDialog(item: LibraryItemSummary) {
+    setThumbnailFile(null);
+    setDialog({ itemId: item.id, mode: "thumbnail" });
+  }
+
   function handleSignOut() {
     signOut().then(() => {
       startTransition(() => {
@@ -881,6 +888,73 @@ function AdminDashboardPage() {
       setDialog(null);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Delete failed.");
+    }
+  }
+
+  async function handleFolderThumbnail(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!dialogItem || dialogItem.kind !== "folder" || !thumbnailFile) {
+      return;
+    }
+
+    setIsBusy(true);
+    setErrorMessage(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("action", "set-folder-thumbnail");
+      formData.append("itemId", dialogItem.id);
+      formData.append("file", thumbnailFile);
+
+      const response = await fetch("/api/admin/upload", {
+        body: formData,
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error(await parseError(response));
+      }
+
+      await invalidateData();
+      setDialog(null);
+      setThumbnailFile(null);
+      setNotice({
+        message: `${dialogItem.name}'s thumbnail has been updated.`,
+        variant: "default",
+      });
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Thumbnail update failed.");
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function handleRemoveFolderThumbnail() {
+    if (!dialogItem || dialogItem.kind !== "folder") {
+      return;
+    }
+
+    try {
+      await postAdmin(
+        {
+          action: "remove-folder-thumbnail",
+          id: dialogItem.id,
+        },
+        {
+          onSuccess: async () => {
+            await invalidateData();
+            setDialog(null);
+            setThumbnailFile(null);
+            setNotice({
+              message: `${dialogItem.name}'s thumbnail has been removed.`,
+              variant: "default",
+            });
+          },
+        },
+      );
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Thumbnail removal failed.");
     }
   }
 
@@ -975,6 +1049,16 @@ function AdminDashboardPage() {
         onSelect: () => openMoveDialog(item),
         renderIcon: () => <IconArrowsMove className="size-4" />,
       },
+      ...(item.kind === "folder"
+        ? [
+            {
+              key: "thumbnail",
+              label: "Thumbnail",
+              onSelect: () => openThumbnailDialog(item),
+              renderIcon: () => <IconPhoto className="size-4" />,
+            },
+          ]
+        : []),
       {
         key: "info",
         label: "Info",
@@ -1577,6 +1661,40 @@ function AdminDashboardPage() {
                 <DialogDismiss>Cancel</DialogDismiss>
                 <Button disabled={isBusy} type="submit">
                   Move
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        ) : null}
+
+        {dialog?.mode === "thumbnail" && dialogItem?.kind === "folder" ? (
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Folder thumbnail</DialogTitle>
+              <DialogDescription>
+                Add, replace, or remove the image shown on {dialogItem.name}.
+              </DialogDescription>
+            </DialogHeader>
+            <form className="mt-4" onSubmit={handleFolderThumbnail}>
+              <Input
+                accept="image/jpeg,image/png"
+                onChange={(event) => setThumbnailFile(event.currentTarget.files?.[0] ?? null)}
+                type="file"
+              />
+              <DialogFooter>
+                {dialogItem.thumbnailUrl ? (
+                  <Button
+                    disabled={isBusy}
+                    onClick={() => void handleRemoveFolderThumbnail()}
+                    type="button"
+                    variant="destructive"
+                  >
+                    Remove
+                  </Button>
+                ) : null}
+                <DialogDismiss>Cancel</DialogDismiss>
+                <Button disabled={isBusy || !thumbnailFile} type="submit">
+                  Save thumbnail
                 </Button>
               </DialogFooter>
             </form>

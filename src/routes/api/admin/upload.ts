@@ -20,12 +20,43 @@ export const Route = createFileRoute("/api/admin/upload")({
         }
 
         const formData = await request.formData();
+        const actionValue = formData.get("action");
+        const action = typeof actionValue === "string" ? actionValue : "";
         const file = formData.get("file");
+        const itemIdValue = formData.get("itemId");
+        const itemId =
+          typeof itemIdValue === "string" && itemIdValue.trim().length > 0
+            ? itemIdValue.trim()
+            : null;
         const parentIdValue = formData.get("parentId");
         const parentId =
           typeof parentIdValue === "string" && parentIdValue.trim().length > 0
             ? parentIdValue.trim()
             : null;
+
+        if (action === "set-folder-thumbnail") {
+          if (!itemId) {
+            return json({ error: "itemId is required." }, 400);
+          }
+
+          if (!(file instanceof File)) {
+            return json({ error: "A thumbnail image is required." }, 400);
+          }
+
+          try {
+            const { updateLibraryFolderThumbnail } = await import("@/lib/library.server");
+            const item = await updateLibraryFolderThumbnail({
+              file,
+              itemId,
+              updatedBy: session.user.id,
+            });
+
+            return json({ item }, 200);
+          } catch (error) {
+            return json({ error: getErrorMessage(error) }, 400);
+          }
+        }
+
         const files = formData.getAll("files").reduce<File[]>((accumulator, value) => {
           if (
             typeof value === "object" &&
