@@ -4,13 +4,14 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconCircleCheck,
+  IconFolder,
   IconKey,
   IconSearch,
   IconTrash,
   IconX,
 } from "@tabler/icons-react";
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
-import { type ReactNode, startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { type FormEvent, type ReactNode, startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
 
 import { BrandMark } from "@/components/brand-mark";
 import { ProfileMenu } from "@/components/profile-menu";
@@ -18,10 +19,20 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogDismiss,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/sonner";
 import { signOut } from "@/lib/auth.actions";
+import type { LibraryItemSummary } from "@/lib/library";
 import { formatDateTime } from "@/lib/utils";
 import { loadAdminUsersPage } from "@/routes/admin/-dashboard.function";
 
@@ -140,8 +151,12 @@ function AdminStudentsPage() {
   const currentPage = page ?? 1;
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
+  const [isFolderAccessLoading, setIsFolderAccessLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [folderAccessUser, setFolderAccessUser] = useState<AdminUser | null>(null);
+  const [rootFolders, setRootFolders] = useState<LibraryItemSummary[]>([]);
   const [searchInput, setSearchInput] = useState(q ?? "");
+  const [selectedFolderIds, setSelectedFolderIds] = useState<string[]>([]);
   const [usersPage, setUsersPage] = useState<AdminUsersPage | null>(null);
   const deferredQuery = useDeferredValue(searchInput.trim());
   const studentUsers = useMemo(() => usersPage?.users ?? [], [usersPage]);
@@ -340,6 +355,75 @@ function AdminStudentsPage() {
     }
   }
 
+  async function handleOpenFolderAccess(user: AdminUser) {
+    setFolderAccessUser(user);
+    setRootFolders([]);
+    setSelectedFolderIds([]);
+    setIsFolderAccessLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const response = await fetch(
+        `/api/admin?resource=student-folder-access&studentId=${encodeURIComponent(user.id)}`,
+      );
+
+      if (!response.ok) {
+        throw new Error(await parseError(response));
+      }
+
+      const payload = (await response.json()) as {
+        assignedFolderIds?: string[];
+        folders?: LibraryItemSummary[];
+      };
+
+      setRootFolders(payload.folders ?? []);
+      setSelectedFolderIds(payload.assignedFolderIds ?? []);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Folder access could not be loaded.";
+      setErrorMessage(message);
+      toast.error("Folder access failed", message);
+      setFolderAccessUser(null);
+    } finally {
+      setIsFolderAccessLoading(false);
+    }
+  }
+
+  async function handleSaveFolderAccess(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!folderAccessUser) {
+      return;
+    }
+
+    try {
+      await postAdmin(
+        {
+          action: "set-student-folder-access",
+          folderIds: selectedFolderIds,
+          id: folderAccessUser.id,
+        },
+        { onSuccess: refreshUsers },
+      );
+      toast.success(
+        "Folder access updated",
+        `${folderAccessUser.name} can access ${selectedFolderIds.length} folder${selectedFolderIds.length === 1 ? "" : "s"}.`,
+      );
+      setFolderAccessUser(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Folder access could not be saved.";
+      setErrorMessage(message);
+      toast.error("Folder access failed", message);
+    }
+  }
+
+  function toggleSelectedFolderId(folderId: string) {
+    setSelectedFolderIds((current) =>
+      current.includes(folderId)
+        ? current.filter((id) => id !== folderId)
+        : [...current, folderId],
+    );
+  }
+
   function renderUserStatus(user: AdminUser) {
     if (isPendingApprovalUser(user)) {
       return <Badge variant="secondary">Pending approval</Badge>;
@@ -531,14 +615,26 @@ function AdminStudentsPage() {
                               <IconTrash className="size-4" />
                             </ActionIconButton>
                           ) : !pending ? (
-                            <ActionIconButton
-                              disabled={isBusy}
-                              label="Forgot password"
-                              onClick={() => void handleResetUserPassword(user)}
-                              variant="outline"
-                            >
-                              <IconKey className="size-4" />
-                            </ActionIconButton>
+                            <>
+                              {!user.banned ? (
+                                <ActionIconButton
+                                  disabled={isBusy}
+                                  label="Folder access"
+                                  onClick={() => void handleOpenFolderAccess(user)}
+                                  variant="outline"
+                                >
+                                  <IconFolder className="size-4" />
+                                </ActionIconButton>
+                              ) : null}
+                              <ActionIconButton
+                                disabled={isBusy}
+                                label="Forgot password"
+                                onClick={() => void handleResetUserPassword(user)}
+                                variant="outline"
+                              >
+                                <IconKey className="size-4" />
+                              </ActionIconButton>
+                            </>
                           ) : null}
                         </div>
                       </div>
@@ -596,6 +692,60 @@ function AdminStudentsPage() {
           )}
         </Card>
       </main>
+
+      <Dialog
+        onOpenChange={(open) => {
+          if (!open) {
+            setFolderAccessUser(null);
+          }
+        }}
+        open={folderAccessUser !== null}
+      >
+        {folderAccessUser ? (
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Folder access</DialogTitle>
+              <DialogDescription>
+                Assign root folders that {folderAccessUser.name} can see in the student library.
+              </DialogDescription>
+            </DialogHeader>
+            <form className="mt-4" onSubmit={handleSaveFolderAccess}>
+              {isFolderAccessLoading ? (
+                <div className="rounded-[4px] border border-border px-3 py-8 text-center text-sm text-muted-foreground">
+                  Loading folders...
+                </div>
+              ) : rootFolders.length === 0 ? (
+                <div className="rounded-[4px] border border-border px-3 py-8 text-center text-sm text-muted-foreground">
+                  No root folders are available.
+                </div>
+              ) : (
+                <div className="max-h-80 space-y-2 overflow-y-auto rounded-[4px] border border-border p-2">
+                  {rootFolders.map((folder) => (
+                    <label
+                      className="flex cursor-pointer items-center gap-3 rounded-[4px] px-2 py-2 text-sm hover:bg-muted/60"
+                      key={folder.id}
+                    >
+                      <input
+                        checked={selectedFolderIds.includes(folder.id)}
+                        className="size-4 accent-primary"
+                        onChange={() => toggleSelectedFolderId(folder.id)}
+                        type="checkbox"
+                      />
+                      <span className="min-w-0 truncate">{folder.name}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              <DialogFooter>
+                <DialogDismiss>Cancel</DialogDismiss>
+                <Button disabled={isBusy || isFolderAccessLoading} type="submit">
+                  Save access
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        ) : null}
+      </Dialog>
     </div>
   );
 }

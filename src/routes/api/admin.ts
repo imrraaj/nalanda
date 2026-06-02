@@ -68,6 +68,25 @@ export const Route = createFileRoute("/api/admin")({
           return json({ items });
         }
 
+        if (resource === "student-folder-access") {
+          const studentId = url.searchParams.get("studentId")?.trim();
+
+          if (!studentId) {
+            return json({ error: "studentId is required" }, 400);
+          }
+
+          const {
+            listAssignableRootFolders,
+            listStudentFolderAccess,
+          } = await import("@/lib/library.server");
+          const [folders, assignedFolders] = await Promise.all([
+            listAssignableRootFolders(),
+            listStudentFolderAccess({ studentId }),
+          ]);
+
+          return json({ assignedFolderIds: assignedFolders.map((folder) => folder.id), folders });
+        }
+
         return json({ error: "Invalid resource" }, 400);
       },
       POST: async ({ request }: { request: Request }) => {
@@ -132,6 +151,30 @@ export const Route = createFileRoute("/api/admin")({
             headers: request.headers,
           });
           return json({ ok: true, temporaryPassword: studentTemporaryPassword });
+        }
+
+        if (action === "set-student-folder-access") {
+          const { folderIds, id } = body as { folderIds?: unknown; id?: string };
+
+          if (!id) {
+            return json({ error: "id is required" }, 400);
+          }
+
+          if (!Array.isArray(folderIds) || !folderIds.every((value) => typeof value === "string")) {
+            return json({ error: "folderIds must be an array of ids" }, 400);
+          }
+
+          const { replaceStudentFolderAccess } = await import("@/lib/library.server");
+          const assignedFolders = await replaceStudentFolderAccess({
+            createdBy: session.user.id,
+            folderIds,
+            studentId: id,
+          });
+
+          return json({
+            assignedFolderIds: assignedFolders.map((folder) => folder.id),
+            ok: true,
+          });
         }
 
         if (action === "approve-document" || action === "reject-document") {

@@ -2,7 +2,7 @@ import { and, desc, eq, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm"
 
 import { documentStorage } from "@/bucket/s3-storage";
 import { db } from "@/db/index";
-import { libraryItem } from "@/db/schema";
+import { libraryFolderAccess, libraryItem } from "@/db/schema";
 import {
   getLibraryDescendantIds,
   getLibraryFileKind,
@@ -159,17 +159,101 @@ async function listAllLibraryItemRows() {
   return db.select().from(libraryItem);
 }
 
-export async function listLibraryItemsForSession(session?: SessionLike | null) {
-  const whereClause = isAdminSession(session)
-    ? undefined
-    : or(eq(libraryItem.kind, "folder"), eq(libraryItem.status, "approved"));
-
+async function listGrantedRootFolderIds(studentId: string) {
   const rows = await db
-    .select(libraryItemSummarySelection)
-    .from(libraryItem)
-    .where(whereClause);
+    .select({ folderId: libraryFolderAccess.folderId })
+    .from(libraryFolderAccess)
+    .where(eq(libraryFolderAccess.studentId, studentId));
 
-  return rows.map(serializeLibraryItem);
+  return rows.map((row) => row.folderId);
+}
+
+function findRootFolderIdForItem(
+  items: readonly Pick<typeof libraryItem.$inferSelect, "id" | "kind" | "parentId">[],
+  itemId: string,
+) {
+  const index = new Map(items.map((item) => [item.id, item]));
+  let current = index.get(itemId) ?? null;
+  let rootFolderId: string | null = null;
+
+  while (current) {
+    if (current.kind === "folder") {
+      rootFolderId = current.id;
+    }
+
+    if (!current.parentId) {
+      return rootFolderId;
+    }
+
+    current = index.get(current.parentId) ?? null;
+  }
+
+  return rootFolderId;
+}
+
+async function userCanAccessLibraryItem(input: {
+  itemId: string;
+  session: SessionLike;
+}) {
+  if (isAdminSession(input.session)) {
+    return true;
+  }
+
+  const [items, grantedFolderIds] = await Promise.all([
+    listAllLibraryItemRows(),
+    listGrantedRootFolderIds(input.session.user.id),
+  ]);
+
+  if (grantedFolderIds.length === 0) {
+    return false;
+  }
+
+  const rootFolderId = findRootFolderIdForItem(items, input.itemId);
+  return !!rootFolderId && grantedFolderIds.includes(rootFolderId);
+}
+
+export async function listLibraryItemsForSession(session?: SessionLike | null) {
+  if (isAdminSession(session)) {
+    const rows = await db.select(libraryItemSummarySelection).from(libraryItem);
+    return rows.map(serializeLibraryItem);
+  }
+
+  if (!session) {
+    return [];
+  }
+
+  const [rows, grantedFolderIds] = await Promise.all([
+    db.select(libraryItemSummarySelection).from(libraryItem),
+    listGrantedRootFolderIds(session.user.id),
+  ]);
+
+  if (grantedFolderIds.length === 0) {
+    return [];
+  }
+
+  const descendantIds = new Set<string>();
+
+  for (const folderId of grantedFolderIds) {
+    const root = rows.find(
+      (item) =>
+        item.id === folderId &&
+        item.kind === "folder" &&
+        item.parentId === null &&
+        item.status === "approved",
+    );
+
+    if (!root) {
+      continue;
+    }
+
+    for (const itemId of getLibraryDescendantIds(rows, folderId)) {
+      descendantIds.add(itemId);
+    }
+  }
+
+  return rows
+    .filter((row) => descendantIds.has(row.id) && row.status === "approved")
+    .map(serializeLibraryItem);
 }
 
 export async function createLibraryFolder(input: {
@@ -492,6 +576,10 @@ export async function getReadableLibraryItemForSession(input: {
     throw new Error("Document not found.");
   }
 
+  if (!(await userCanAccessLibraryItem({ itemId: item.id, session: input.session }))) {
+    throw new Error("Document not found.");
+  }
+
   return item;
 }
 
@@ -538,6 +626,103 @@ export async function listAdminUsers() {
 export async function loadAdminLibrarySnapshot() {
   const items = await db.select(libraryItemSummarySelection).from(libraryItem);
   return items.map(serializeLibraryItem);
+}
+
+export async function listAssignableRootFolders() {
+  const folders = await db
+    .select(libraryItemSummarySelection)
+    .from(libraryItem)
+    .where(and(
+      eq(libraryItem.kind, "folder"),
+      isNull(libraryItem.parentId),
+      eq(libraryItem.status, "approved"),
+    ))
+    .orderBy(libraryItem.name);
+
+  return folders.map(serializeLibraryItem);
+}
+
+export async function listStudentFolderAccess(input: { studentId: string }) {
+  const rows = await db
+    .select({
+      contentType: libraryItem.contentType,
+      createdAt: libraryItem.createdAt,
+      folderId: libraryFolderAccess.folderId,
+      id: libraryItem.id,
+      kind: libraryItem.kind,
+      name: libraryItem.name,
+      parentId: libraryItem.parentId,
+      size: libraryItem.size,
+      status: libraryItem.status,
+      thumbnailContentType: libraryItem.thumbnailContentType,
+      thumbnailSize: libraryItem.thumbnailSize,
+      thumbnailStorageKey: libraryItem.thumbnailStorageKey,
+      updatedAt: libraryItem.updatedAt,
+    })
+    .from(libraryFolderAccess)
+    .innerJoin(libraryItem, eq(libraryFolderAccess.folderId, libraryItem.id))
+    .where(eq(libraryFolderAccess.studentId, input.studentId));
+
+  return rows.map((row) => serializeLibraryItem(row));
+}
+
+export async function replaceStudentFolderAccess(input: {
+  createdBy: string;
+  folderIds: string[];
+  studentId: string;
+}) {
+  const { user } = await import("@/db/schema");
+  const uniqueFolderIds = [...new Set(input.folderIds.map((id) => id.trim()).filter(Boolean))];
+  const [student] = await db
+    .select({ id: user.id, role: user.role })
+    .from(user)
+    .where(eq(user.id, input.studentId));
+
+  if (!student) {
+    throw new Error("Student not found.");
+  }
+
+  if (student.role === "admin") {
+    throw new Error("Folder access can only be assigned to students.");
+  }
+
+  if (uniqueFolderIds.length > 0) {
+    const folders = await db
+      .select({
+        id: libraryItem.id,
+        kind: libraryItem.kind,
+        parentId: libraryItem.parentId,
+      })
+      .from(libraryItem)
+      .where(inArray(libraryItem.id, uniqueFolderIds));
+    const folderById = new Map(folders.map((folder) => [folder.id, folder]));
+
+    for (const folderId of uniqueFolderIds) {
+      const folder = folderById.get(folderId);
+
+      if (!folder || folder.kind !== "folder" || folder.parentId !== null) {
+        throw new Error("Only root folders can be assigned to students.");
+      }
+    }
+  }
+
+  await db
+    .delete(libraryFolderAccess)
+    .where(eq(libraryFolderAccess.studentId, input.studentId));
+
+  if (uniqueFolderIds.length === 0) {
+    return [];
+  }
+
+  await db.insert(libraryFolderAccess).values(
+    uniqueFolderIds.map((folderId) => ({
+      createdBy: input.createdBy,
+      folderId,
+      studentId: input.studentId,
+    })),
+  );
+
+  return listStudentFolderAccess({ studentId: input.studentId });
 }
 
 export async function listAdminUsersPage(input: {

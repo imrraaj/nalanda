@@ -4,6 +4,7 @@ import {
   index,
   integer,
   pgTable,
+  primaryKey,
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
@@ -70,5 +71,47 @@ export const libraryItemRelations = relations(libraryItem, ({ many, one }) => ({
     fields: [libraryItem.updatedBy],
     references: [user.id],
     relationName: "library_item_updater",
+  }),
+}));
+
+export const libraryFolderAccess = pgTable(
+  "library_folder_access",
+  {
+    studentId: text("student_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    folderId: text("folder_id")
+      .notNull()
+      .references(() => libraryItem.id, { onDelete: "cascade" }),
+    createdBy: text("created_by")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.studentId, table.folderId],
+      name: "library_folder_access_pk",
+    }),
+    index("library_folder_access_student_idx").on(table.studentId),
+    index("library_folder_access_folder_idx").on(table.folderId),
+  ],
+);
+
+export const libraryFolderAccessRelations = relations(libraryFolderAccess, ({ one }) => ({
+  creator: one(user, {
+    fields: [libraryFolderAccess.createdBy],
+    references: [user.id],
+    relationName: "library_folder_access_creator",
+  }),
+  folder: one(libraryItem, {
+    fields: [libraryFolderAccess.folderId],
+    references: [libraryItem.id],
+    relationName: "library_folder_access_folder",
+  }),
+  student: one(user, {
+    fields: [libraryFolderAccess.studentId],
+    references: [user.id],
+    relationName: "library_folder_access_student",
   }),
 }));
