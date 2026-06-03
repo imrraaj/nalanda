@@ -56,6 +56,10 @@ function toIsoString(value: Date | string | null | undefined) {
 }
 
 function serializeLibraryItem(row: LibraryItemRow): LibraryItemSummary {
+  const thumbnailVersion = row.thumbnailStorageKey
+    ? encodeURIComponent(`${toIsoString(row.updatedAt)}-${row.thumbnailSize ?? 0}`)
+    : null;
+
   return {
     contentType: row.contentType ?? null,
     createdAt: toIsoString(row.createdAt),
@@ -68,7 +72,7 @@ function serializeLibraryItem(row: LibraryItemRow): LibraryItemSummary {
     thumbnailUrl:
       row.thumbnailStorageKey
         ? documentStorage.getPublicReadUrl(row.thumbnailStorageKey) ??
-          `/api/documents/thumbnail?itemId=${encodeURIComponent(row.id)}`
+          `/api/documents/thumbnail?itemId=${encodeURIComponent(row.id)}&v=${thumbnailVersion}`
         : null,
     updatedAt: toIsoString(row.updatedAt),
   };

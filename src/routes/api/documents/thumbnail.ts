@@ -27,7 +27,7 @@ export const Route = createFileRoute("/api/documents/thumbnail")({
 
           const headers = new Headers({
             "Cache-Control": "public, max-age=86400",
-            "Content-Type": "image/png",
+            "Content-Type": thumbnail.contentType || item.contentType,
             "Cross-Origin-Resource-Policy": "same-origin",
             "X-Content-Type-Options": "nosniff",
           });
