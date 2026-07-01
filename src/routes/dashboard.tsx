@@ -3,6 +3,7 @@ import {
   IconEye,
   IconFolderOpen,
   IconInfoCircle,
+  IconLink,
   IconSearch,
 } from "@tabler/icons-react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -39,6 +40,7 @@ import { signOut } from "@/lib/auth.actions";
 import {
   getLibraryBreadcrumbs,
   getLibraryChildren,
+  isLinkItem,
   isPdfItem,
   searchLibraryItems,
   type LibraryItemSummary,
@@ -198,13 +200,28 @@ function DashboardPage() {
   }, [dialog, downloadItem, items, navigate, openId, q, selectedFolderId, viewer]);
 
   useEffect(() => {
-    if (downloadItem && isPdfItem(downloadItem)) {
+    if (!downloadItem) {
+      return;
+    }
+
+    if (isPdfItem(downloadItem)) {
       void navigate({
         search: { itemId: downloadItem.id, name: downloadItem.name },
         to: "/reader",
       });
+      return;
     }
-  }, [downloadItem, navigate]);
+
+    if (isLinkItem(downloadItem) && downloadItem.linkUrl) {
+      window.open(downloadItem.linkUrl, "_blank", "noopener,noreferrer");
+      updateRouteState({
+        folderId: selectedFolderId,
+        openId: null,
+        q,
+        replace: true,
+      });
+    }
+  }, [downloadItem, navigate, q, selectedFolderId]);
 
   const breadcrumbs = useMemo(
     () => getLibraryBreadcrumbs(items, selectedFolderId),
@@ -305,6 +322,11 @@ function DashboardPage() {
       return;
     }
 
+    if (isLinkItem(item) && item.linkUrl) {
+      window.open(item.linkUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+
     updateRouteState({
       folderId: item.parentId,
       openId: item.id,
@@ -324,11 +346,13 @@ function DashboardPage() {
     return [
       {
         key: "open",
-        label: item.kind === "folder" ? "Open" : isPdfItem(item) ? "Open" : "Download",
+        label: item.kind === "folder" || isPdfItem(item) || isLinkItem(item) ? "Open" : "Download",
         onSelect: () => openItem(item),
         renderIcon: () =>
           item.kind === "folder" ? (
             <IconFolderOpen className="size-4" />
+          ) : isLinkItem(item) ? (
+            <IconLink className="size-4" />
           ) : (
             <IconEye className="size-4" />
           ),
@@ -510,7 +534,7 @@ function DashboardPage() {
           </DialogContent>
         ) : null}
 
-        {downloadItem && !isPdfItem(downloadItem) ? (
+        {downloadItem && !isPdfItem(downloadItem) && !isLinkItem(downloadItem) ? (
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Download file</DialogTitle>

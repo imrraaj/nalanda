@@ -17,7 +17,7 @@ export const libraryItem = pgTable(
     id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
     name: text("name").notNull(),
     kind: text("kind", {
-      enum: ["folder", "pdf", "jpeg", "png", "epub"],
+      enum: ["folder", "pdf", "jpeg", "png", "epub", "link"],
     }).notNull(),
     parentId: text("parent_id").references((): AnyPgColumn => libraryItem.id, {
       onDelete: "cascade",
@@ -28,6 +28,7 @@ export const libraryItem = pgTable(
       .default("approved")
       .notNull(),
     storageKey: text("storage_key"),
+    linkUrl: text("link_url"),
     contentType: text("content_type"),
     size: integer("size"),
     thumbnailStorageKey: text("thumbnail_storage_key"),

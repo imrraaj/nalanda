@@ -6,6 +6,7 @@ import {
   IconFileTypeJpg,
   IconFileTypePng,
   IconFolder,
+  IconLink,
 } from "@tabler/icons-react";
 
 import { Card } from "@/components/ui/card";
@@ -35,6 +36,8 @@ function getTileIcon(item: Pick<LibraryItemSummary, "kind">) {
       return <IconFileTypePng className="size-10 text-primary" />;
     case "epub":
       return <IconBook2 className="size-10 text-primary" />;
+    case "link":
+      return <IconLink className="size-10 text-primary" />;
     default:
       return <IconFileDescription className="size-10 text-primary" />;
   }

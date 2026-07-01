@@ -59,6 +59,16 @@ export function LibraryInfoPanel({
             <dd className="mt-1">{childCount} items</dd>
           </div>
         ) : null}
+        {item.linkUrl ? (
+          <div>
+            <dt className="text-xs uppercase tracking-[0.14em] text-muted-foreground">URL</dt>
+            <dd className="mt-1 break-all">
+              <a className="text-primary hover:underline" href={item.linkUrl} rel="noreferrer" target="_blank">
+                {item.linkUrl}
+              </a>
+            </dd>
+          </div>
+        ) : null}
         {typeof item.size === "number" ? (
           <div>
             <dt className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Size</dt>

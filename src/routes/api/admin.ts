@@ -223,6 +223,24 @@ export const Route = createFileRoute("/api/admin")({
           return json({ item }, 201);
         }
 
+        if (action === "create-link") {
+          const { createLibraryLink } = await import("@/lib/library.server");
+          const { name, parentId, url } = body as {
+            name?: string | null;
+            parentId?: string | null;
+            url?: string;
+          };
+
+          const item = await createLibraryLink({
+            createdBy: session.user.id,
+            name: name ?? null,
+            parentId: typeof parentId === "string" && parentId.trim() ? parentId : null,
+            url: url ?? "",
+          });
+
+          return json({ item }, 201);
+        }
+
         if (action === "rename-item") {
           const { renameLibraryItem } = await import("@/lib/library.server");
           const { id, name } = body as { id?: string; name?: string };

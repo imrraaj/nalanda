@@ -19,7 +19,7 @@ type SessionLike = {
 
 type LibraryItemRow = Pick<
   typeof libraryItem.$inferSelect,
-  "contentType" | "createdAt" | "id" | "kind" | "name" | "parentId" | "size" | "status" | "updatedAt"
+  "contentType" | "createdAt" | "id" | "kind" | "linkUrl" | "name" | "parentId" | "size" | "status" | "updatedAt"
   | "thumbnailContentType" | "thumbnailSize" | "thumbnailStorageKey"
 >;
 
@@ -28,6 +28,7 @@ const libraryItemSummarySelection = {
   createdAt: libraryItem.createdAt,
   id: libraryItem.id,
   kind: libraryItem.kind,
+  linkUrl: libraryItem.linkUrl,
   name: libraryItem.name,
   parentId: libraryItem.parentId,
   size: libraryItem.size,
@@ -65,6 +66,7 @@ function serializeLibraryItem(row: LibraryItemRow): LibraryItemSummary {
     createdAt: toIsoString(row.createdAt),
     id: row.id,
     kind: row.kind,
+    linkUrl: row.linkUrl ?? null,
     name: row.name,
     parentId: row.parentId ?? null,
     size: row.size ?? null,
@@ -403,6 +405,7 @@ export async function deleteLibraryItemTree(input: { itemId: string }) {
     (current) =>
       descendantIds.has(current.id) &&
       current.kind !== "folder" &&
+      current.kind !== "link" &&
       typeof current.storageKey === "string" &&
       current.storageKey.length > 0,
   );
@@ -417,6 +420,72 @@ export async function deleteLibraryItemTree(input: { itemId: string }) {
   );
 
   await db.delete(libraryItem).where(eq(libraryItem.id, item.id));
+}
+
+function ensureLibraryLinkUrl(url: string) {
+  const trimmed = url.trim();
+
+  if (!trimmed) {
+    throw new Error("A link URL is required.");
+  }
+
+  let parsed: URL;
+
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    throw new Error("Enter a valid URL, including https:// or http://.");
+  }
+
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    throw new Error("Links must use http:// or https://.");
+  }
+
+  return parsed.toString();
+}
+
+function getDefaultLinkName(url: string) {
+  try {
+    const parsed = new URL(url);
+    const pathName = parsed.pathname.split("/").filter(Boolean).at(-1);
+    return decodeURIComponent(pathName || parsed.hostname);
+  } catch {
+    return "Untitled link";
+  }
+}
+
+export async function createLibraryLink(input: {
+  createdBy: string;
+  name?: string | null;
+  parentId: string | null;
+  url: string;
+}) {
+  const linkUrl = ensureLibraryLinkUrl(input.url);
+  const name = ensureLibraryName(input.name?.trim() ? input.name : getDefaultLinkName(linkUrl));
+
+  await ensureParentFolder(input.parentId);
+  await ensureSiblingNameAvailable({ name, parentId: input.parentId });
+
+  const [created] = await db
+    .insert(libraryItem)
+    .values({
+      contentType: "text/uri-list",
+      createdBy: input.createdBy,
+      kind: "link",
+      linkUrl,
+      name,
+      parentId: input.parentId,
+      size: null,
+      status: "approved",
+      updatedBy: input.createdBy,
+    })
+    .returning();
+
+  if (!created) {
+    throw new Error("Link could not be saved.");
+  }
+
+  return serializeLibraryItem(created);
 }
 
 export async function uploadLibraryFile(input: {
@@ -748,6 +817,7 @@ export async function listStudentFolderAccess(input: { studentId: string }) {
       folderId: libraryFolderAccess.folderId,
       id: libraryItem.id,
       kind: libraryItem.kind,
+      linkUrl: libraryItem.linkUrl,
       name: libraryItem.name,
       parentId: libraryItem.parentId,
       size: libraryItem.size,

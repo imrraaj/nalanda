@@ -1,4 +1,4 @@
-export const libraryItemKinds = ["folder", "pdf", "jpeg", "png", "epub"] as const;
+export const libraryItemKinds = ["folder", "pdf", "jpeg", "png", "epub", "link"] as const;
 export const libraryFileKinds = ["pdf", "jpeg", "png", "epub"] as const;
 export const libraryItemStatuses = ["pending", "approved", "rejected"] as const;
 
@@ -11,6 +11,7 @@ export type LibraryItemSummary = {
   createdAt: string;
   id: string;
   kind: LibraryItemKind;
+  linkUrl: string | null;
   name: string;
   parentId: string | null;
   size: number | null;
@@ -53,6 +54,10 @@ export function isPdfItem(item: Pick<LibraryItemSummary, "kind">) {
   return item.kind === "pdf";
 }
 
+export function isLinkItem(item: Pick<LibraryItemSummary, "kind">) {
+  return item.kind === "link";
+}
+
 export function getLibraryItemKindLabel(kind: LibraryItemKind) {
   switch (kind) {
     case "folder":
@@ -65,6 +70,8 @@ export function getLibraryItemKindLabel(kind: LibraryItemKind) {
       return "PNG";
     case "epub":
       return "EPUB";
+    case "link":
+      return "Link";
   }
 }
 

@@ -9,6 +9,7 @@ import {
   IconFolderPlus,
   IconInfoCircle,
   IconKey,
+  IconLink,
   IconPhoto,
   IconPlus,
   IconSearch,
@@ -55,6 +56,7 @@ import {
   getLibraryBreadcrumbs,
   getLibraryChildren,
   getLibraryFolderOptions,
+  isLinkItem,
   isPdfItem,
   searchLibraryItems,
   type LibraryItemSummary,
@@ -84,7 +86,7 @@ type AdminUsersPage = {
 type AdminTab = "library" | "users";
 
 type AdminDialogState =
-  | { mode: "create-folder" }
+  | { mode: "create-folder" | "create-link" }
   | { itemId: string; mode: "delete" | "info" | "move" | "rename" | "thumbnail" }
   | null;
 
@@ -316,6 +318,7 @@ function AdminDashboardPage() {
   const selectedFolderId = folderId ?? null;
   const [dialog, setDialog] = useState<AdminDialogState>(null);
   const [draftName, setDraftName] = useState("");
+  const [draftLinkUrl, setDraftLinkUrl] = useState("");
   const [moveParentId, setMoveParentId] = useState("__root__");
   const [isBusy, setIsBusy] = useState(false);
   const [isUsersLoading, setIsUsersLoading] = useState(false);
@@ -412,13 +415,29 @@ function AdminDashboardPage() {
   ]);
 
   useEffect(() => {
-    if (downloadItem && isPdfItem(downloadItem)) {
+    if (!downloadItem) {
+      return;
+    }
+
+    if (isPdfItem(downloadItem)) {
       void navigate({
         search: { itemId: downloadItem.id, name: downloadItem.name },
         to: "/reader",
       });
+      return;
     }
-  }, [downloadItem, navigate]);
+
+    if (isLinkItem(downloadItem) && downloadItem.linkUrl) {
+      window.open(downloadItem.linkUrl, "_blank", "noopener,noreferrer");
+      updateRouteState({
+        folderId: selectedFolderId,
+        openId: null,
+        q,
+        replace: true,
+        tab: "library",
+      });
+    }
+  }, [downloadItem, navigate, q, selectedFolderId]);
 
   const breadcrumbs = useMemo(
     () => getLibraryBreadcrumbs(items, selectedFolderId),
@@ -773,6 +792,11 @@ function AdminDashboardPage() {
       return;
     }
 
+    if (isLinkItem(item) && item.linkUrl) {
+      window.open(item.linkUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+
     updateRouteState({
       folderId: item.parentId,
       openId: item.id,
@@ -784,6 +808,12 @@ function AdminDashboardPage() {
   function openCreateFolderDialog() {
     setDraftName("");
     setDialog({ mode: "create-folder" });
+  }
+
+  function openCreateLinkDialog() {
+    setDraftName("");
+    setDraftLinkUrl("");
+    setDialog({ mode: "create-link" });
   }
 
   function openRenameDialog(item: LibraryItemSummary) {
@@ -825,6 +855,27 @@ function AdminDashboardPage() {
       setDialog(null);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Folder could not be created.");
+    }
+  }
+
+  async function handleCreateLink(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    try {
+      await postAdmin(
+        {
+          action: "create-link",
+          name: draftName,
+          parentId: selectedFolderId,
+          url: draftLinkUrl,
+        },
+        { onSuccess: invalidateData },
+      );
+      setDraftName("");
+      setDraftLinkUrl("");
+      setDialog(null);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Link could not be saved.");
     }
   }
 
@@ -1028,11 +1079,13 @@ function AdminDashboardPage() {
     return [
       {
         key: "open",
-        label: item.kind === "folder" ? "Open" : isPdfItem(item) ? "Open" : "Download",
+        label: item.kind === "folder" || isPdfItem(item) || isLinkItem(item) ? "Open" : "Download",
         onSelect: () => openItem(item),
         renderIcon: () =>
           item.kind === "folder" ? (
             <IconFolderOpen className="size-4" />
+          ) : isLinkItem(item) ? (
+            <IconLink className="size-4" />
           ) : (
             <IconEye className="size-4" />
           ),
@@ -1211,6 +1264,10 @@ function AdminDashboardPage() {
                   >
                     <IconUpload className="size-4" />
                     Upload folder
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={openCreateLinkDialog}>
+                    <IconLink className="size-4" />
+                    Save link
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={openCreateFolderDialog}>
                     <IconFolderPlus className="size-4" />
@@ -1613,6 +1670,36 @@ function AdminDashboardPage() {
           </DialogContent>
         ) : null}
 
+        {dialog?.mode === "create-link" ? (
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Save link</DialogTitle>
+              <DialogDescription>
+                Add a web link inside {currentFolderName}. Students with folder access can open it from the library.
+              </DialogDescription>
+            </DialogHeader>
+            <form className="mt-4 space-y-3" onSubmit={handleCreateLink}>
+              <Input
+                onChange={(event) => setDraftLinkUrl(event.currentTarget.value)}
+                placeholder="https://example.com/document"
+                type="url"
+                value={draftLinkUrl}
+              />
+              <Input
+                onChange={(event) => setDraftName(event.currentTarget.value)}
+                placeholder="Name (optional)"
+                value={draftName}
+              />
+              <DialogFooter>
+                <DialogDismiss>Cancel</DialogDismiss>
+                <Button disabled={isBusy || !draftLinkUrl.trim()} type="submit">
+                  Save link
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        ) : null}
+
         {dialog?.mode === "rename" && dialogItem ? (
           <DialogContent>
             <DialogHeader>
@@ -1731,7 +1818,7 @@ function AdminDashboardPage() {
           </DialogContent>
         ) : null}
 
-        {downloadItem && !isPdfItem(downloadItem) ? (
+        {downloadItem && !isPdfItem(downloadItem) && !isLinkItem(downloadItem) ? (
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Download file</DialogTitle>
